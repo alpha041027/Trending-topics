@@ -76,6 +76,15 @@ def day_from_timestamp(ts, now):
 
 
 # ---------------------------------------------------------------- Reddit
+# 模拟浏览器头，降低被 Cloudflare / Reddit WAF 拦截的概率
+_REDDIT_HEADERS = {
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.reddit.com/",
+    "DNT": "1",
+}
+
+
 def fetch_reddit(subreddits=None, time_range="month", limit=40, now=None):
     """抓 subreddit top 帖子，返回统一样本列表（含 signals）。"""
     subreddits = subreddits or OTOME_SUBREDDITS
@@ -83,7 +92,7 @@ def fetch_reddit(subreddits=None, time_range="month", limit=40, now=None):
     samples = []
     for sub in subreddits:
         url = f"https://www.reddit.com/r/{sub}/top.json?t={time_range}&limit={limit}"
-        data = http_get_json(url)
+        data = http_get_json(url, headers=_REDDIT_HEADERS.copy())
         children = data.get("data", {}).get("children", [])
         for i, ch in enumerate(children):
             d = ch.get("data", {})
