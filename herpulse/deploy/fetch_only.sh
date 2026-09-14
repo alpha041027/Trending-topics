@@ -24,7 +24,7 @@ STAMP="$(date +%Y%m%d_%H%M%S)"
 TARGET="${1:-all}"   # all | bluesky | ao3 | trends
 
 run_bluesky() {
-  echo "[bluesky] 采集 ..."
+  echo "[bluesky] 采集（关键词搜索 + 女性向账号 feed 双路，从人出发）..."
   python src/fetchers.py --source bluesky --limit 30 \
     --out "data/corpus_bluesky_$STAMP.json"
 }

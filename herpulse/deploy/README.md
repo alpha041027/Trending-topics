@@ -6,7 +6,7 @@
 
 | 环节 | 脚本 | 是否必须海外网络 | 说明 |
 |------|------|------------------|------|
-| 1. 采集 | `src/fetchers.py` | **必须海外** | 直连 Reddit / AO3 / Google Trends，国内被墙 |
+| 1. 采集 | `src/fetchers.py` | **必须海外** | 直连 Bluesky / AO3 / Google Trends，国内被墙 |
 | 2. 抽取 | `src/extract.py` | 不必需 | 调 DeepSeek API（`api.deepseek.com` 国内可达） |
 | 3. 聚合 | `src/aggregate.py` | 不必需 | 纯本地计算 |
 | 4. 渲染 | `src/build_dashboard.py` | 不必需 | 纯本地计算 |
@@ -19,7 +19,7 @@
 
 ```
 海外（GitHub Actions，免费 runner）
-  fetch_only.sh  →  data/corpus_reddit_*.json + fanwork_ao3_*.json + search_google_*.json
+  fetch_only.sh  →  data/corpus_bluesky_*.json + fanwork_ao3_*.json + search_google_*.json + discover_daily_*.json
         │  Artifacts 下载回本地
         ▼
 国内（本地 / 任意机器）
@@ -30,7 +30,7 @@
 
 | 文件 | 用途 |
 |------|------|
-| `fetch_only.sh` | **海外**只采集（Bluesky 社媒 + AO3 二创 + Google Trends 搜索），产出 corpus |
+| `fetch_only.sh` | **海外**只采集（Bluesky 社媒双路 + AO3 二创 + Google Trends 搜索/每日趋势），产出 corpus |
 | `run_local.sh` | **国内**后半段（抽取→聚合→渲染），吃 corpus，自动检测并注入 fanwork/search 真值 |
 | `github-actions.yml` | GitHub Actions 定时采集（免费海外 runner） |
 | `run_pipeline.sh` | 完整链路（采集+后半段），供「全链路出海」备选 |
@@ -46,7 +46,7 @@
 1. 代码推到**私有仓库**（含 `herpulse/` 目录与 `deploy/github-actions.yml`）。
 2. 把 `deploy/github-actions.yml` 复制为仓库根 `.github/workflows/herpulse-fetch.yml`。
 3. `Actions` 页手动 `Run workflow` 验证一次（首次建议先手动，确认 Reddit 不被限流）。
-4. 每次 run 结束后，在 `Artifacts` 里下载 `herpulse-corpus`（含 `corpus_reddit_*.json`、`fanwork_ao3_*.json`、`search_google_*.json`）。
+4. 每次 run 结束后，在 `Artifacts` 里下载 `herpulse-corpus`（含 `corpus_bluesky_*.json`、`fanwork_ao3_*.json`、`search_google_*.json`、`discover_daily_*.json`）。
 
 无需任何 Secrets——采集步骤不调 LLM，不碰 API key。
 
@@ -72,10 +72,20 @@ bash deploy/run_local.sh data/corpus_reddit_20260914_120000.json
 
 | 信号 | 数据源 | 语义 | 采集方式 |
 |------|--------|------|----------|
-| social 社媒声量 | Bluesky 公开 API | 帖子的 likes + replies×10（真实声量） | `--source bluesky` |
+| social 社媒声量 | Bluesky 公开 API | 帖子的 likes + replies×10（真实声量）；**关键词搜索 + 女性向账号 feed 双路**（从人出发，发现面更宽） | `--source bluesky` |
 | fanwork 二创产量 | AO3 | 该设定点 tag 的作品总数（真实二创产量） | `--source ao3 --tags-from-vocab` |
 | search 搜索热度 | Google Trends | 该词相对自身历史热度的相对值（0-100） | `--source trends --tags-from-vocab` |
 | rank 榜单名次 | 采集内名次 | 同平台内排序位置（第 1 名最热） | 随社媒采集产出 |
+
+### 真·热点发现：Google Trends 每日趋势（dailytrends）
+
+四信号衡量的是「预设词表内设定点」的热度；为了发现**词表外的新热点**，另接入 **dailytrends 每日趋势**——Google 算出的「过去 24 小时搜索量跳涨」的词，非预设：
+
+| 数据源 | 语义 | 采集方式 |
+|--------|------|----------|
+| dailytrends 每日趋势 | Google 算出的每日上升搜索词（US/JP/KR，含绝对搜索量级 formattedTraffic） | `--source trendsdaily` |
+
+`aggregate.py` 对趋势词做相关性分类：命中词表别名 → 词表词实时上榜；命中女性向语境词 → 新趋势词（进看板「趋势发现」板块）；无关词（新闻/体育）丢弃。看板明确区分「API 筛选的新热点」与「预设词表监测」。
 
 ### ⚠️ Google Trends 搜索信号的语义局限（务必理解）
 

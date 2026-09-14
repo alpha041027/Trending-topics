@@ -56,6 +56,12 @@ BLUESKY_QUERIES = [
     "reverse harem", "dating sim", "romance game",
 ]
 
+# Bluesky 账号发现关键词（用 searchActors 找女性向相关账号，再拉其 feed）
+BLUESKY_ACTOR_QUERIES = [
+    "otome game", "visual novel", "乙女ゲーム", "otome",
+    "dating sim", "恋愛ゲーム",
+]
+
 
 # ---------------------------------------------------------------- HTTP 工具
 # 显式读取代理环境变量，Windows 上 urllib 自动探测有时不稳定
@@ -171,53 +177,111 @@ def fetch_reddit(subreddits=None, time_range="month", limit=40, now=None,
 
 
 # ---------------------------------------------------------------- Bluesky
-def fetch_bluesky(queries=None, limit=30, now=None):
-    """抓 Bluesky 公开搜索帖子，返回统一样本列表（含 signals）。
+def _bluesky_post_to_sample(post, idx, now, source_key):
+    """把 Bluesky post 视图对象转成统一样本。source_key 用于 id 前缀区分来源。"""
+    text = post.get("record", {}).get("text", "")
+    if not text:
+        return None
+    likes = post.get("likeCount", 0) or 0
+    replies = post.get("replyCount", 0) or 0
+    created = post.get("record", {}).get("createdAt", "")
+    day = 0
+    if created:
+        try:
+            created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            days_ago = (now - created_dt).days
+            day = max(0, min(13, days_ago))
+        except ValueError:
+            pass
+    post_id = post.get("uri", "").split("/")[-1] or str(idx)
+    return {
+        "id": f"bluesky_{source_key}_{post_id}",
+        "text": text[:2000],
+        "language": "en",
+        "market": "EUUS",
+        "day": day,
+        "source": "bluesky",
+        "signals": {
+            "social": likes + replies * 10,
+            "fanwork": 0,
+            "search": 0,
+            "rank": idx + 1,
+        },
+    }
 
-    Bluesky 公共 API 无需认证：
-      https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts
+
+def _fetch_bluesky_actors(queries, per_actor=20, max_actors=20, now=None):
+    """从女性向相关账号的 feed 拉最新帖子（从人出发，发现面宽于关键词搜索）。
+
+    流程：searchActors 按关键词找账号 → getAuthorFeed 拉每个账号最新帖子
+    （filter=posts_no_replies 排除回复，只留原创/转发）。无需认证。
+    """
+    now = now or datetime.now(timezone.utc)
+    actors = []
+    seen = set()
+    for q in queries:
+        url = (
+            "https://public.api.bsky.app/xrpc/app.bsky.actor.searchActors"
+            f"?q={urllib.parse.quote(q)}&limit=15"
+        )
+        try:
+            data = http_get_json(url)
+        except Exception:  # noqa: BLE001
+            continue
+        for a in data.get("actors", []):
+            handle = a.get("handle", "")
+            if handle and handle not in seen:
+                seen.add(handle)
+                actors.append(handle)
+        if len(actors) >= max_actors:
+            break
+    samples = []
+    for handle in actors[:max_actors]:
+        url = (
+            "https://public.api.bsky.app/xrpc/app.bsky.feed.getAuthorFeed"
+            f"?actor={urllib.parse.quote(handle)}&limit={per_actor}&filter=posts_no_replies"
+        )
+        try:
+            data = http_get_json(url)
+        except Exception:  # noqa: BLE001
+            continue
+        for item in data.get("feed", []):
+            post = item.get("post", {})
+            s = _bluesky_post_to_sample(post, len(samples), now, "actor")
+            if s:
+                s["query"] = handle  # 记录来源账号
+                samples.append(s)
+    return samples
+
+
+def fetch_bluesky(queries=None, limit=30, now=None, actor_queries=None,
+                  per_actor=20, max_actors=20):
+    """抓 Bluesky 帖子：关键词搜索（聚焦补充）+ 账号 feed（从人出发，发现面更宽）。
+
+    Bluesky 公共 API 无需认证（public.api.bsky.app）。
     """
     queries = queries or BLUESKY_QUERIES
+    actor_queries = actor_queries or BLUESKY_ACTOR_QUERIES
     now = now or datetime.now(timezone.utc)
     samples = []
+    # 方式 1：关键词搜索（聚焦补充）
     for q in queries:
         url = (
             "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
             f"?q={urllib.parse.quote(q)}&limit={limit}"
         )
-        data = http_get_json(url)
+        try:
+            data = http_get_json(url)
+        except Exception:  # noqa: BLE001
+            continue
         posts = data.get("posts", [])
         for i, post in enumerate(posts):
-            text = post.get("record", {}).get("text", "")
-            if not text:
-                continue
-            likes = post.get("likeCount", 0) or 0
-            replies = post.get("replyCount", 0) or 0
-            created = post.get("record", {}).get("createdAt", "")
-            day = 0
-            if created:
-                try:
-                    created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                    days_ago = (now - created_dt).days
-                    day = max(0, min(13, days_ago))
-                except ValueError:
-                    pass
-            post_id = post.get("uri", "").split("/")[-1] or str(i)
-            samples.append({
-                "id": f"bluesky_{q.replace(' ', '_')}_{post_id}",
-                "text": text[:2000],
-                "language": "en",
-                "market": "EUUS",
-                "day": day,
-                "source": "bluesky",
-                "query": q,
-                "signals": {
-                    "social": likes + replies * 10,
-                    "fanwork": 0,
-                    "search": 0,
-                    "rank": i + 1,
-                },
-            })
+            s = _bluesky_post_to_sample(post, i, now, q.replace(" ", "_"))
+            if s:
+                s["query"] = q
+                samples.append(s)
+    # 方式 2：账号 feed（从人出发）
+    samples += _fetch_bluesky_actors(actor_queries, per_actor, max_actors, now)
     return samples
 
 
@@ -526,7 +590,30 @@ def self_test():
     print(f"  dailytrends 解析：query={first['title']['query']!r} traffic={first['formattedTraffic']!r} "
           f"related={len(first['relatedQueries'])} articles={len(first['articles'])}")
 
-    print("\n自检通过。真实抓取需在能访问 Reddit/AO3/Google Trends 的网络环境运行：")
+    # Bluesky searchActors / getAuthorFeed 结构解析验证（mock，不联网）
+    fake_actors = {"actors": [
+        {"handle": "otomegames.bsky.social", "displayName": "Otome Games", "followersCount": 5000},
+        {"handle": "vn_updates.bsky.social", "displayName": "VN Updates", "followersCount": 3000},
+    ]}
+    fake_feed = {"feed": [
+        {"post": {"uri": "at://did:plc:xxx/app.bsky.feed.post/abc",
+                  "record": {"text": "New otome banner announced", "createdAt": "2026-09-14T12:00:00Z"},
+                  "likeCount": 120, "replyCount": 15, "repostCount": 40}},
+        {"post": {"uri": "at://did:plc:xxx/app.bsky.feed.post/def",
+                  "record": {"text": "slow burn route discussion", "createdAt": "2026-09-13T10:00:00Z"},
+                  "likeCount": 80, "replyCount": 8, "repostCount": 20}},
+    ]}
+    handles = [a["handle"] for a in fake_actors["actors"]]
+    bs = []
+    for i, item in enumerate(fake_feed["feed"]):
+        s = _bluesky_post_to_sample(item["post"], i, datetime.now(timezone.utc), "test")
+        if s:
+            bs.append(s)
+    socials = [s["signals"]["social"] for s in bs]
+    print(f"\n  Bluesky searchActors 解析：{len(handles)} 个账号（{handles[0]}）")
+    print(f"  Bluesky getAuthorFeed → sample：{len(bs)} 条，social={socials}（期望 [270, 160]）")
+
+    print("\n自检通过。真实抓取需在能访问 Reddit/AO3/Google Trends/Bluesky 的网络环境运行：")
     print("  python src/fetchers.py --source reddit --out data/corpus_reddit.json")
     print("  python src/fetchers.py --source trends --tags-from-vocab data/seed_vocabulary.json --out data/search_google.json")
 
