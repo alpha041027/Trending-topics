@@ -1,12 +1,6 @@
-# HerPulse 方法A：本地采集 Reddit → push → GitHub Actions 自动跑 AO3 + 后半段 + Pages
-# 触发条件：
-#   1. 推送 herpulse/data/ 目录变更到 main 分支（你本地采集后 push 上来）
-#   2. 手动点击 Run workflow
-#
-# 你需要在本地做的（每天一次）：
-#   cd e:/HerPulse/herpulse
-#   bash deploy/fetch_only.sh
-#   git add data/ && git commit -m "data: $(date +%Y%m%d)" && git push
+# HerPulse 全自动链路（采集 → 抽取 → 聚合 → 渲染 → GitHub Pages）
+# 用法：点击 "Run workflow"，等 3-5 分钟后访问
+# https://alpha041027.github.io/Trending-topics/
 #
 # 前置设置：
 #   Settings → Secrets → Actions → 新建 HERPULSE_LLM_API_KEY（DeepSeek key）
@@ -15,11 +9,9 @@
 name: HerPulse Build Dashboard
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'herpulse/data/**'
-  workflow_dispatch: {}
+  schedule:
+    - cron: '0 1 * * *'   # 每天 UTC 01:00（北京时间 09:00）
+  workflow_dispatch: {}   # 支持手动触发
 
 permissions:
   contents: read
@@ -42,6 +34,10 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Fetch Bluesky
+        run: bash herpulse/deploy/fetch_only.sh bluesky
+        continue-on-error: true
+
       - name: Fetch AO3
         run: bash herpulse/deploy/fetch_only.sh ao3
         continue-on-error: true
@@ -52,7 +48,7 @@ jobs:
         with:
           name: herpulse-corpus
           path: |
-            herpulse/data/corpus_reddit_*.json
+            herpulse/data/corpus_*.json
             herpulse/data/fanwork_ao3_*.json
           retention-days: 30
 
@@ -88,7 +84,7 @@ jobs:
             <h1>HerPulse 看板构建失败</h1>
             <p>可能的原因：</p>
             <ul>
-              <li>未找到 Reddit 语料文件（请先本地采集并 push）</li>
+              <li>未找到语料文件（Bluesky/AO3 采集失败）</li>
               <li>DeepSeek API key 未配置或额度不足</li>
             </ul>
             <p>请检查 <a href="https://github.com/alpha041027/Trending-topics/actions">Actions 日志</a>。</p>
