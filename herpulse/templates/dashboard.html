@@ -96,6 +96,36 @@
 
   footer{margin-top:20px;text-align:center;font-size:12px;color:var(--faint);line-height:1.8}
   .chip{display:inline-block;font-size:11px;padding:1px 8px;border-radius:6px;background:var(--bg);color:var(--muted);margin-right:4px}
+
+  /* ---- 信号拆解 ---- */
+  .sigbox{margin-top:10px;padding:10px 12px;background:var(--bg);border-radius:10px}
+  .sigbox .st{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px}
+  .sigrow{display:flex;align-items:center;gap:8px;font-size:11.5px;margin:4px 0}
+  .sigrow .sk{width:64px;color:var(--muted);flex:none;text-align:right}
+  .sigbar{position:relative;flex:1;height:14px;background:var(--line);border-radius:7px;overflow:hidden}
+  .sigbar .fill{position:absolute;top:0;bottom:0;border-radius:7px}
+  .sigbar .fill.pos{left:50%;background:linear-gradient(90deg,#f3b8cd,var(--rose))}
+  .sigbar .fill.neg{right:50%;background:linear-gradient(270deg,#f5c3b0,var(--coral))}
+  .sigrow .sv{width:52px;text-align:right;font-weight:600;flex:none}
+  .sigrow .sr{width:88px;color:var(--faint);flex:none;font-size:10.5px;text-align:left}
+  .sig-pos{color:var(--teal)} .sig-neg{color:var(--coral)} .sig-zero{color:var(--faint)}
+
+  /* ---- 维度分布图表 ---- */
+  .dimchart{display:flex;flex-direction:column;gap:8px}
+  .dimrow{display:flex;align-items:center;gap:10px;font-size:12px}
+  .dimrow .dn{width:86px;color:var(--muted);flex:none;text-align:right}
+  .dimbar{flex:1;height:20px;background:var(--line);border-radius:6px;overflow:hidden;position:relative}
+  .dimbar .fill{height:100%;border-radius:6px;transition:width .4s}
+  .dimrow .dc{width:86px;color:var(--muted);flex:none;font-size:11px}
+  .marketrow{display:flex;gap:10px;margin-top:12px}
+  .marketcell{flex:1;background:var(--bg);border-radius:10px;padding:10px 12px;text-align:center}
+  .marketcell .mv{font-size:20px;font-weight:600}
+  .marketcell .mk{font-size:11px;color:var(--muted)}
+  .srctag{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:20px;margin-right:6px}
+  .srctag.real{background:#e7f5ef;color:#157a56}
+  .srctag.fake{background:#fdf1e6;color:#b06018}
+  .srctag.miss{background:#f1eef3;color:#8a8390}
+
 </style>
 </head>
 <body>
@@ -121,10 +151,19 @@
 
   <div class="live-banner">
     <span class="dot"></span>
-    <span><b>真实数据链路</b>：以下设定点由 LLM 从 <span id="bnCount">—</span> 条海外女性向内容中实时抽取（含逐字证据），热度由去量纲引擎计算。<b>热度信号(social/fanwork/search/rank)暂为模拟值</b>，接入 X/TikTok/AO3/商店榜后即为真值。</span>
+    <span><b>数据链路</b>：从 <span id="bnCount">—</span> 条海外女性向内容中实时抽取（含逐字证据），热度由去量纲引擎计算。信号来源：<span id="signalSource"></span></span>
   </div>
 
   <section class="kpis" id="kpis"></section>
+
+  <section class="card" id="sec-dim">
+    <header>
+      <h2>题材结构 · 维度分布</h2>
+      <span class="sub">7 维度设定点数量与热点 · 市场分布</span>
+    </header>
+    <div class="dimchart" id="dimChart"></div>
+    <div class="marketrow" id="marketRow"></div>
+  </section>
 
   <div class="layout">
     <div>
@@ -187,9 +226,70 @@ function renderKPI(){
     {t:'追踪内容', v:k.tracked, d:'条多语言语料（英/日/韩/中）'},
     {t:'热点设定点', v:k.hotspots, d:'热度 ≥ 2σ 基准'},
     {t:'突增预警', v:k.surge_alerts, d:'Δ声量 ≥ +50%（3天 vs 11天）'},
-    {t:'总声量', v:fmtNum(k.total_social), d:'社媒讨论量（模拟值）'}
+    {t:'总声量', v:fmtNum(k.total_social), d:'社媒讨论量（见信号来源标注）'}
   ];
   $('#kpis').innerHTML = cards.map(c=>`<div class="kpi"><div class="t">${c.t}</div><div class="v">${c.v}</div><div class="d">${c.d}</div></div>`).join('');
+}
+
+function ss(){ return (DATA.meta&&DATA.meta.signal_source)||{}; }
+
+function srcTag(key){
+  const s = ss()[key];
+  if(!s) return '';
+  const cls = s.real ? 'real' : (String(s.source).indexOf('未接入')>=0 ? 'miss' : 'fake');
+  return `<span class="srctag ${cls}" title="${s.source}">${s.label}·${s.real?'真值':'未接入'}</span>`;
+}
+
+function renderSignalSource(){
+  const order=['social','fanwork','search','rank'];
+  $('#signalSource').innerHTML = order.map(k=>srcTag(k)).join('');
+}
+
+function renderDimChart(){
+  const dd = DATA.dim_dist || [];
+  const max = Math.max(...dd.map(d=>d.count), 1);
+  const colors = {relationship:'#d4537e', personality:'#7f77dd', mood:'#1d9e75', occupation_age:'#378add', appearance:'#ba7517', world:'#9a5fb0', gameplay:'#d85a30'};
+  $('#dimChart').innerHTML = dd.map(d=>{
+    const w = Math.round(d.count/max*100);
+    const c = colors[d.dim] || '#8a8390';
+    return `<div class="dimrow">
+      <span class="dn">${d.name}</span>
+      <div class="dimbar"><div class="fill" style="width:${w}%;background:${c}"></div></div>
+      <span class="dc">${d.count} 个${d.hot?` · <b style="color:${c}">${d.hot} 热点</b>`:''}</span>
+    </div>`;
+  }).join('') || '<div style="color:var(--faint);font-size:12.5px">暂无维度分布。</div>';
+}
+
+function renderMarketRow(){
+  const md = DATA.market_dist || {};
+  const total = Object.values(md).reduce((a,b)=>a+b,0)||1;
+  $('#marketRow').innerHTML = Object.entries(md).map(([k,v])=>{
+    const pct = Math.round(v/total*100);
+    return `<div class="marketcell"><div class="mv">${v}</div><div class="mk">${k} · ${pct}%</div></div>`;
+  }).join('');
+}
+
+function renderSignalBox(t){
+  const z = t.signals_z || {};
+  const raw = t.signals_raw || {};
+  const labels = {social:'社媒', fanwork:'二创', search:'搜索', rank:'名次'};
+  const order = ['social','fanwork','search','rank'];
+  const maxAbs = Math.max(...order.map(k=>Math.abs(z[k]||0)), 0.0001);
+  const rows = order.map(k=>{
+    const zv = z[k]||0;
+    const rv = raw[k]!==undefined ? raw[k] : 0;
+    const pct = Math.min(Math.abs(zv)/maxAbs*50, 50);
+    const cls = zv>0.01?'sig-pos':(zv<-0.01?'sig-neg':'sig-zero');
+    const fillCls = zv>=0?'pos':'neg';
+    const rawTxt = k==='rank' ? '#'+rv : fmtNum(rv);
+    return `<div class="sigrow">
+      <span class="sk">${labels[k]}</span>
+      <div class="sigbar"><div class="fill ${fillCls}" style="width:${pct}%"></div></div>
+      <span class="sv ${cls}">${zv>0?'+':''}${zv.toFixed(2)}</span>
+      <span class="sr">${rawTxt}</span>
+    </div>`;
+  }).join('');
+  return `<div class="sigbox"><div class="st">热度信号拆解（z-score 贡献 · 原始值）</div>${rows}</div>`;
 }
 
 function aliasStr(a){
@@ -207,6 +307,7 @@ function renderTropes(){
     const dSign = t.delta>=0?'+':'';
     const evi = (t.evidence||[]).map(e=>`<span class="ev">${e}</span>`).join('');
     const aliases = aliasStr(t.aliases);
+    const sigbox = t.signals_z ? renderSignalBox(t) : '';
     return `<div class="trope">
       <div class="trope-top">
         <span class="trope-rk">${i+1}</span>
@@ -221,6 +322,7 @@ function renderTropes(){
         ${t.high_signal?'<span class="chip">high-signal</span>':''}
       </div>
       <div class="trope-def"><span class="lbl">释义</span>${t.definition||'—'}</div>
+      ${sigbox}
       ${evi?`<div class="trope-evi"><span class="lbl">证据</span>${evi}</div>`:''}
       ${aliases?`<div class="trope-aliases">别名：${aliases}</div>`:''}
     </div>`;
@@ -270,7 +372,14 @@ function renderInsight(){
 }
 
 function renderFoot(){
-  $('#foot').innerHTML = `生成于 ${DATA.meta.generated} · 抽取=DeepSeek V4 Pro（thinking disabled） · 热度=去量纲引擎（log1p+z-score+MAD） · 信号为模拟值，待接 X/TikTok/AO3/商店榜`;
+  const s = ss();
+  const order=['social','fanwork','search','rank'];
+  const labels={social:'社媒',fanwork:'二创',search:'搜索',rank:'名次'};
+  const real = order.filter(k=>s[k]&&s[k].real).map(k=>labels[k]);
+  const miss = order.filter(k=>s[k]&&!s[k].real).map(k=>labels[k]);
+  const realTxt = real.length? real.join('/')+'=真值' : '';
+  const missTxt = miss.length? miss.join('/')+'=未接入' : '';
+  $('#foot').innerHTML = `生成于 ${DATA.meta.generated} · 抽取=DeepSeek V4 Pro（thinking disabled） · 热度=去量纲引擎（log1p+z-score+MAD） · ${realTxt}${realTxt&&missTxt?'；':''}${missTxt}`;
   $('#bnCount').textContent = DATA.meta.sample_count;
 }
 
@@ -284,7 +393,8 @@ function bindCtrls(){
 }
 
 function init(){
-  renderKPI(); renderTropes(); renderRecipes(); renderNewWords(); renderSignals(); renderInsight(); renderFoot(); bindCtrls();
+  renderSignalSource(); renderKPI(); renderDimChart(); renderMarketRow();
+  renderTropes(); renderRecipes(); renderNewWords(); renderSignals(); renderInsight(); renderFoot(); bindCtrls();
 }
 init();
 </script>

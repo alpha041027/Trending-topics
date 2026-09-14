@@ -16,7 +16,8 @@ fi
 cd "$ROOT"
 
 # ---- 配置（环境变量优先）----
-AO3_TAGS="${HERPULSE_AO3_TAGS:-Enemies to Lovers,Slow Burn,Yandere,Boss and Employee,Office Romance,Reincarnation}"
+# 若显式设置 HERPULSE_AO3_TAGS，则用指定 tag；否则从词表自动生成 high_signal 英文别名
+# HERPULSE_AO3_LIMIT：AO3 tag 数量上限（0=不限，默认全部 high_signal）
 
 STAMP="$(date +%Y%m%d_%H%M%S)"
 TARGET="${1:-all}"   # all | bluesky | ao3
@@ -29,8 +30,14 @@ run_bluesky() {
 
 run_ao3() {
   echo "[ao3] 采集 fanwork 信号 ..."
-  python src/fetchers.py --source ao3 --tags "$AO3_TAGS" \
-    --out "data/fanwork_ao3_$STAMP.json"
+  if [ -n "${HERPULSE_AO3_TAGS:-}" ]; then
+    python src/fetchers.py --source ao3 --tags "$HERPULSE_AO3_TAGS" \
+      --out "data/fanwork_ao3_$STAMP.json"
+  else
+    python src/fetchers.py --source ao3 --tags-from-vocab data/seed_vocabulary.json \
+      --ao3-limit "${HERPULSE_AO3_LIMIT:-0}" \
+      --out "data/fanwork_ao3_$STAMP.json"
+  fi
 }
 
 echo "===== HerPulse 海外采集 $STAMP (mode=$TARGET) ====="

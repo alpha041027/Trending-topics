@@ -44,23 +44,62 @@ DIM_NAMES = {
 }
 
 
-def build_global_stats(samples):
-    """基于本批语料所有样本的信号，算 log 空间的全局均值/方差（z-score 基准）。"""
+def build_global_stats(samples, fanwork_values=None):
+    """基于本批语料所有样本的信号，算 log 空间的全局均值/方差（z-score 基准）。
+
+    fanwork_values: 设定点粒度的 fanwork 值列表。若提供，fanwork 的 z-score 基准改用
+    「设定点粒度」（来自 AO3 真实 works 数），而非样本累加值（后者在真实采集时恒为 0）。
+    """
     logs = {name: [] for name in SIGNALS}
     for s in samples:
         sig = s.get("signals", {})
         for name in SIGNALS:
+            if name == "fanwork" and fanwork_values is not None:
+                continue  # fanwork 单独用设定点粒度
             x = sig.get(name, 0)
             if name == "rank":
                 x = reverse_rank(x)
             logs[name].append(log1p(x))
+    if fanwork_values is not None:
+        logs["fanwork"] = [log1p(v) for v in fanwork_values]
     stats = {}
     for name in SIGNALS:
         vals = logs[name]
+        if not vals:
+            stats[name] = {"mu": 0.0, "sigma": 0.0}
+            continue
         mu = sum(vals) / len(vals)
         var = sum((v - mu) ** 2 for v in vals) / len(vals)
         stats[name] = {"mu": mu, "sigma": var ** 0.5}
     return stats
+
+
+def load_fanwork_map(path, dim_info):
+    """读取 AO3 fanwork 文件，把英文 tag 反查为设定点，返回 {设定点tag: works}。
+
+    fanwork_ao3_*.json 结构：[{tag, works, signals:{fanwork}, ...}, ...]
+    dim_info 来自 build_index（别名→规范tag，已小写化），用于反查。
+    """
+    if not path:
+        return {}
+    p = Path(path)
+    if not p.exists():
+        print(f"  [fanwork] 未找到 {path}，fanwork 信号保持原值（可能为 0/模拟）")
+        return {}
+    data = load_json(path)
+    fanwork_map = defaultdict(int)
+    matched = 0
+    for item in data:
+        ao3_tag = str(item.get("tag", "")).strip().lower()
+        works = int(item.get("works", 0)
+                    or (item.get("signals", {}) or {}).get("fanwork", 0)
+                    or 0)
+        trope = dim_info.get(ao3_tag)
+        if trope and works > 0:
+            fanwork_map[trope] += works
+            matched += 1
+    print(f"  [fanwork] 读取 {len(data)} 个 AO3 tag，命中 {matched} 个设定点（去重后 {len(fanwork_map)} 个）")
+    return dict(fanwork_map)
 
 
 def aggregate_signals(samples):
@@ -115,11 +154,12 @@ def main():
     p.add_argument("--detail", default="data/extractions_detail_corpus.json")
     p.add_argument("--vocab", default="data/seed_vocabulary.json")
     p.add_argument("--out", default="data/dashboard_data.json")
+    p.add_argument("--fanwork", default="", help="AO3 fanwork 文件（fanwork_ao3_*.json），注入真实二创产量信号")
     p.add_argument("--top", type=int, default=18, help="题材榜输出条数")
     args = p.parse_args()
 
     vocab = load_json(args.vocab)
-    tag_info, _ = build_index(vocab)
+    tag_info, dim_info = build_index(vocab)
 
     corpus = load_json(args.corpus)
     samples = corpus["samples"] if isinstance(corpus, dict) else corpus
@@ -153,8 +193,20 @@ def main():
             v = sl.get(k, [])
             signal_layer[k] += len(v) if isinstance(v, list) else (1 if v else 0)
 
-    stats = build_global_stats(samples)
+    # 读 AO3 fanwork 真值（可选）
+    fanwork_map = load_fanwork_map(args.fanwork, dim_info)
+
+    # 聚合样本信号（social/search/rank + 样本内的 fanwork）
     acc = aggregate_signals(samples)
+
+    # 注入真实 fanwork：AO3 works 数覆盖样本累加的 fanwork
+    all_tags = list(acc.keys())
+    fanwork_values = [fanwork_map.get(t, 0) for t in all_tags]
+    for t in all_tags:
+        acc[t]["signals"]["fanwork"] = fanwork_map.get(t, 0)
+
+    # 全局 z-score 基准：fanwork 用设定点粒度（AO3 works），其余用样本粒度
+    stats = build_global_stats(samples, fanwork_values=fanwork_values)
 
     # 每个 tag 算去量纲热度 + delta + region
     tropes = []
@@ -182,6 +234,8 @@ def main():
             "aliases": info.get("aliases", {}),
             "high_signal": info.get("high_signal", False),
             "works": len(a["samples"]),
+            "signals_z": {n: round(z[n], 3) for n in SIGNALS},
+            "signals_raw": {n: sig[n] for n in SIGNALS},
             "evidence": list(dict.fromkeys(a["evidence"]))[:4],  # 去重、最多4条证据
         })
 
@@ -226,6 +280,23 @@ def main():
     obs_th, hot_th = 1.0, 2.0
     hot_tags = [t for t in tropes if t["heat"] >= hot_th]
 
+    # 维度分布 + 市场分布（供看板图表）
+    dim_dist = {}
+    market_dist = {"欧美": 0, "日韩": 0, "全球": 0}
+    for t in tropes:
+        d = t["dim"]
+        dd = dim_dist.setdefault(d, {"dim": d, "name": t["dim_name"], "count": 0, "hot": 0, "heat_sum": 0.0})
+        dd["count"] += 1
+        dd["heat_sum"] += t["heat"]
+        if t["heat"] >= hot_th:
+            dd["hot"] += 1
+        market_dist[t["region"]] = market_dist.get(t["region"], 0) + 1
+    dim_dist_list = sorted(dim_dist.values(), key=lambda x: -x["count"])
+
+    # 判断信号来源：样本是否来自真实采集（source 字段）
+    sources = {s.get("source", "") for s in samples}
+    is_real_fetch = bool(sources & {"reddit", "bluesky", "ao3"})
+
     # KPI
     total_social = sum(s.get("signals", {}).get("social", 0) for s in samples)
     surge_tags = [t for t in tropes if t["delta"] >= 50]
@@ -237,12 +308,24 @@ def main():
         key=lambda x: -x["count"],
     )
 
+    # 信号来源标注（供看板如实展示哪些是真值、哪些未接入）
+    signal_source = {
+        "social": {"label": "社媒声量", "real": is_real_fetch,
+                    "source": "Bluesky 真实声量(likes+replies×10)" if is_real_fetch else "模拟值"},
+        "fanwork": {"label": "二创产量", "real": bool(fanwork_map),
+                     "source": "AO3 真实作品数" if fanwork_map else ("未接入(恒0)" if is_real_fetch else "模拟值")},
+        "search": {"label": "搜索热度", "real": False, "source": "未接入(恒0)"},
+        "rank": {"label": "榜单名次", "real": is_real_fetch,
+                  "source": "采集内名次" if is_real_fetch else "模拟值"},
+    }
+
     out = {
         "meta": {
             "generated": "2026-09-14",
             "pipeline": "extract(deepseek-v4-pro) -> aggregate(heat_engine 去量纲)",
-            "note": "抽取=真实 LLM；热度信号(social/fanwork/search/rank)=模拟值待接真实数据源；delta=最近3天vs前11天声量变化",
+            "note": "social=Bluesky 真实声量；fanwork=AO3 真实二创产量；search=未接入；rank=采集内名次；delta=最近3天vs前11天声量变化",
             "sample_count": len(samples),
+            "signal_source": signal_source,
         },
         "kpi": {
             "tracked": len(samples),
@@ -259,6 +342,8 @@ def main():
         "recipes": recipes,
         "new_words": new_words_list,
         "signal_layer": signal_layer,
+        "dim_dist": dim_dist_list,
+        "market_dist": market_dist,
         "dims": {k: {"name": v} for k, v in DIM_NAMES.items()},
     }
 

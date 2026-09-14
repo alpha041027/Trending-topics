@@ -68,8 +68,14 @@ else
 fi
 
 echo "[2/3] 热度聚合 ..."
+FANWORK="$(ls -t data/fanwork_ao3_*.json 2>/dev/null | head -1 || true)"
+FANWORK_ARG=""
+if [ -n "$FANWORK" ]; then
+  echo "  检测到 AO3 fanwork 信号：$FANWORK"
+  FANWORK_ARG="--fanwork $FANWORK"
+fi
 python src/aggregate.py --corpus "$CORPUS" --detail "$DETAIL" \
-  --vocab data/seed_vocabulary.json --out "$DASH"
+  --vocab data/seed_vocabulary.json $FANWORK_ARG --out "$DASH"
 
 echo "[3/3] 渲染看板 ..."
 OUT_HTML="${HERPULSE_OUT_HTML:-$ROOT/../herpulse-dashboard-live.html}"

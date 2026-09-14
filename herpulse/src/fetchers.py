@@ -35,6 +35,7 @@ import json
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
@@ -220,6 +221,27 @@ def fetch_bluesky(queries=None, limit=30, now=None):
 
 
 # ---------------------------------------------------------------- AO3
+def tags_from_vocab(vocab_path, limit=None):
+    """从词表提取 high_signal 设定点的英文别名，作为 AO3 采集 tag。
+
+    词表结构：dimensions[].categories[].points[]，每个 point 有 tag / aliases.en / high_signal。
+    只取 high_signal 设定点的第一个英文别名（最规范、最可能是 AO3 canonical tag）。
+    """
+    with open(vocab_path, encoding="utf-8") as f:
+        vocab = json.load(f)
+    tags = []
+    for dim in vocab.get("dimensions", []):
+        for cat in dim.get("categories", []):
+            for pt in cat.get("points", []):
+                if pt.get("high_signal"):
+                    en = pt.get("aliases", {}).get("en", [])
+                    if en:
+                        tags.append(en[0])
+    if limit:
+        tags = tags[:limit]
+    return tags
+
+
 def fetch_ao3_tag_works(tags, now=None):
     """抓 AO3 各 tag 的作品总数（fanwork 二创信号）。返回 [{tag, works}]。
 
@@ -310,6 +332,8 @@ def main():
     p.add_argument("--source", choices=["reddit", "ao3", "bluesky"], help="数据源")
     p.add_argument("--subreddits", help="逗号分隔的 subreddit（默认 otomegames 等）")
     p.add_argument("--tags", help="逗号分隔的 AO3 tag")
+    p.add_argument("--tags-from-vocab", help="从词表生成 AO3 tag（high_signal 设定点的英文别名）")
+    p.add_argument("--ao3-limit", type=int, default=0, help="AO3 tag 数量上限（0=不限）")
     p.add_argument("--time-range", default="month", help="Reddit 时间范围（day/week/month/year）")
     p.add_argument("--limit", type=int, default=40)
     p.add_argument("--out", default="data/corpus_fetched.json")
@@ -337,9 +361,13 @@ def main():
         to_corpus(samples, "bluesky", args.out)
         print(f"Bluesky 采集完成：{len(samples)} 条帖子 → {args.out}")
     elif args.source == "ao3":
-        if not args.tags:
-            raise SystemExit("AO3 采集需 --tags（逗号分隔的设定点 tag）")
-        tags = [t.strip() for t in args.tags.split(",")]
+        if args.tags:
+            tags = [t.strip() for t in args.tags.split(",")]
+        elif args.tags_from_vocab:
+            tags = tags_from_vocab(args.tags_from_vocab, limit=args.ao3_limit or None)
+            print(f"从词表生成 {len(tags)} 个 AO3 tag（high_signal 英文别名）")
+        else:
+            raise SystemExit("AO3 采集需 --tags 或 --tags-from-vocab（词表路径）")
         result = fetch_ao3_tag_works(tags)
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         with open(args.out, "w", encoding="utf-8") as f:
