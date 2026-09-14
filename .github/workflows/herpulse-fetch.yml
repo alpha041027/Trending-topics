@@ -1,0 +1,35 @@
+# HerPulse 海外采集（GitHub Actions 免费海外 runner，只采集不出海后半段）
+# 产物：herpulse/data/corpus_reddit_*.json + fanwork_ao3_*.json（Artifacts 下载回本地）
+# 注意：runner 是数据中心 IP，Reddit 可能返回 429 限流，AO3 通常正常。
+#      建议先手动 workflow_dispatch 验证，稳定后按需加回 schedule。
+
+name: HerPulse Overseas Fetch
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 每天 UTC 01:00（北京时间 09:00）
+  workflow_dispatch: {}   # 支持手动触发
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch Reddit + AO3
+        run: bash herpulse/deploy/fetch_only.sh
+
+      - name: Upload corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: herpulse-corpus
+          path: |
+            herpulse/data/corpus_reddit_*.json
+            herpulse/data/fanwork_ao3_*.json
+          retention-days: 30

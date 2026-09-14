@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HerPulse · 题材引擎真实产出看板</title>
+<style>
+  :root{
+    --bg:#f6f2f7; --card:#ffffff; --ink:#2b2430; --muted:#7a7180; --faint:#a79aa8;
+    --line:#ece4ef; --rose:#d4537e; --rose-soft:#fbeaf0; --violet:#7f77dd; --violet-soft:#eeedfe;
+    --teal:#1d9e75; --coral:#d85a30; --amber:#ba7517; --blue:#378add; --gray:#b4b2a9;
+    --r-lg:16px; --r-md:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;padding:20px 24px 44px}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--rose),var(--violet));display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:600}
+  .brand h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+  .brand p{font-size:12.5px;color:var(--muted)}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .ctrl{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:2px}
+  .ctrl button{border:none;background:transparent;padding:7px 14px;border-radius:9px;font-size:13px;color:var(--muted);cursor:pointer;transition:.15s;white-space:nowrap}
+  .ctrl button.on{background:var(--rose);color:#fff}
+  .ctrl-label{font-size:12px;color:var(--faint);margin-right:2px}
+
+  .live-banner{display:flex;align-items:center;gap:8px;background:var(--violet-soft);border:1px solid #ddd9f5;border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#5a5490}
+  .live-banner b{color:var(--violet)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--teal);flex:none;animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px}
+  .kpi .t{font-size:13px;color:var(--muted)}
+  .kpi .v{font-size:28px;font-weight:600;margin:4px 0 2px}
+  .kpi .d{font-size:12.5px;color:var(--muted)}
+
+  .layout{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;align-items:start}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px;margin-bottom:14px}
+  .card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .card h2{font-size:15px;font-weight:600}
+  .card .sub{font-size:12px;color:var(--faint)}
+
+  .trope{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;margin-bottom:12px;transition:border .2s}
+  .trope:hover{border-color:var(--rose)}
+  .trope-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .trope-rk{width:22px;height:22px;border-radius:7px;background:var(--rose);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .trope-tag{font-size:15px;font-weight:600}
+  .trope-dim{font-size:11px;color:#fff;padding:2px 9px;border-radius:20px;font-weight:500}
+  .dim-relationship{background:#d4537e}
+  .dim-personality{background:#7f77dd}
+  .dim-mood{background:#1d9e75}
+  .dim-occupation_age{background:#378add}
+  .dim-appearance{background:#ba7517}
+  .dim-world{background:#9a5fb0}
+  .dim-gameplay{background:#d85a30}
+  .trope-heat{margin-left:auto;font-size:20px;font-weight:600}
+  .trope-heat small{font-size:11px;color:var(--faint);font-weight:400}
+  .trope-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:6px}
+  .trope-meta b{color:var(--ink)}
+  .delta-pos{color:var(--teal);font-weight:600}
+  .delta-neg{color:var(--coral);font-weight:600}
+  .trope-def{font-size:12.5px;color:var(--ink);margin-bottom:8px;line-height:1.55}
+  .lbl{font-size:11px;color:var(--muted);font-weight:600;margin-right:6px}
+  .trope-evi{font-size:12px;color:var(--muted);line-height:1.5}
+  .trope-evi .ev{display:block;padding-left:12px;border-left:2px solid var(--rose-soft);margin:3px 0;color:var(--muted)}
+  .trope-evi .ev::before{content:"“";color:var(--rose)}
+  .trope-evi .ev::after{content:"”";color:var(--rose)}
+  .trope-aliases{margin-top:6px;font-size:11px;color:var(--faint)}
+
+  .recipe{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid #f4eef6}
+  .recipe:last-child{border-bottom:none}
+  .recipe .mem{font-size:12px;background:var(--violet-soft);color:var(--violet);padding:2px 8px;border-radius:6px}
+  .recipe .x{color:var(--faint);font-size:12px}
+  .recipe .rh{margin-left:auto;font-size:13px;font-weight:600}
+  .recipe .cnt{font-size:11px;color:var(--faint)}
+
+  .newword{display:flex;gap:8px;align-items:baseline;padding:8px 0;border-bottom:1px solid #f4eef6;font-size:13px}
+  .newword:last-child{border-bottom:none}
+  .newword .w{font-weight:600}
+  .newword .r{color:var(--muted);font-size:12px}
+
+  .sig-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f4eef6;font-size:13px}
+  .sig-row:last-child{border-bottom:none}
+  .sig-row .k{color:var(--muted)}
+  .sig-row .v{margin-left:auto;font-weight:600}
+
+  .insight{font-size:13px;color:var(--ink)}
+  .insight .lead{font-weight:600;margin-bottom:6px}
+  .insight li{list-style:none;position:relative;padding-left:16px;margin-bottom:6px;color:var(--muted)}
+  .insight li::before{content:"";position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:2px;background:var(--violet)}
+
+  footer{margin-top:20px;text-align:center;font-size:12px;color:var(--faint);line-height:1.8}
+  .chip{display:inline-block;font-size:11px;padding:1px 8px;border-radius:6px;background:var(--bg);color:var(--muted);margin-right:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">◆</div>
+      <div>
+        <h1>HerPulse · 题材引擎真实产出看板</h1>
+        <p>DeepSeek V4 Pro 真实抽取 · 去量纲热度 · 欧美 → 日韩 · 不含 BL</p>
+      </div>
+    </div>
+    <div class="controls">
+      <span class="ctrl-label">市场</span>
+      <div class="ctrl" id="marketCtrl">
+        <button data-m="all" class="on">全部</button>
+        <button data-m="EUUS">欧美</button>
+        <button data-m="JPKR">日韩</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="live-banner">
+    <span class="dot"></span>
+    <span><b>真实数据链路</b>：以下设定点由 LLM 从 <span id="bnCount">—</span> 条海外女性向内容中实时抽取（含逐字证据），热度由去量纲引擎计算。<b>热度信号(social/fanwork/search/rank)暂为模拟值</b>，接入 X/TikTok/AO3/商店榜后即为真值。</span>
+  </div>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="layout">
+    <div>
+      <section class="card" id="sec-trope">
+        <header>
+          <h2>设定点热度榜 · 深度解析</h2>
+          <span class="sub">维度 · 释义 · 真实证据 · 跨作品数</span>
+        </header>
+        <div id="tropeList"></div>
+      </section>
+    </div>
+    <div>
+      <section class="card">
+        <header><h2>组合配方</h2><span class="sub">跨维度共现 · 立项金矿</span></header>
+        <div id="recipeList"></div>
+      </section>
+
+      <section class="card">
+        <header><h2>新词提案</h2><span class="sub">词表外候选 · 待策展</span></header>
+        <div id="newWordList"></div>
+      </section>
+
+      <section class="card">
+        <header><h2>信号层</h2><span class="sub">二创 / CP / 争议</span></header>
+        <div id="sigList"></div>
+      </section>
+
+      <section class="card">
+        <header><h2>AI 洞察</h2><span class="sub">基于真实抽取生成</span></header>
+        <div class="insight" id="insightBody"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+
+<script>
+const DATA = __DATA_JSON__;
+
+let state = {m:'all'};
+const $ = s=>document.querySelector(s);
+const $$ = s=>document.querySelectorAll(s);
+
+function fmtNum(n){
+  if(n>=1000000) return (n/1000000).toFixed(1)+'M';
+  if(n>=1000) return (n/1000).toFixed(1)+'K';
+  return ''+n;
+}
+
+function filteredTropes(){
+  let t = DATA.tropes;
+  if(state.m!=='all') t = t.filter(x=> x.region==='全球' || x.region=== (state.m==='EUUS'?'欧美':'日韩'));
+  return t;
+}
+
+function renderKPI(){
+  const k = DATA.kpi;
+  const cards = [
+    {t:'追踪内容', v:k.tracked, d:'条多语言语料（英/日/韩/中）'},
+    {t:'热点设定点', v:k.hotspots, d:'热度 ≥ 2σ 基准'},
+    {t:'突增预警', v:k.surge_alerts, d:'Δ声量 ≥ +50%（3天 vs 11天）'},
+    {t:'总声量', v:fmtNum(k.total_social), d:'社媒讨论量（模拟值）'}
+  ];
+  $('#kpis').innerHTML = cards.map(c=>`<div class="kpi"><div class="t">${c.t}</div><div class="v">${c.v}</div><div class="d">${c.d}</div></div>`).join('');
+}
+
+function aliasStr(a){
+  const bits=[];
+  if(a.en&&a.en.length) bits.push('en:'+a.en.slice(0,3).join('/'));
+  if(a.ja&&a.ja.length) bits.push('ja:'+a.ja.slice(0,2).join('/'));
+  if(a.ko&&a.ko.length) bits.push('ko:'+a.ko.slice(0,2).join('/'));
+  return bits.join(' · ');
+}
+
+function renderTropes(){
+  const list = filteredTropes();
+  $('#tropeList').innerHTML = list.map((t,i)=>{
+    const dCls = t.delta>=0?'delta-pos':'delta-neg';
+    const dSign = t.delta>=0?'+':'';
+    const evi = (t.evidence||[]).map(e=>`<span class="ev">${e}</span>`).join('');
+    const aliases = aliasStr(t.aliases);
+    return `<div class="trope">
+      <div class="trope-top">
+        <span class="trope-rk">${i+1}</span>
+        <span class="trope-tag">${t.tag}</span>
+        <span class="trope-dim dim-${t.dim}">${t.dim_name}</span>
+        <span class="trope-heat">${t.heat.toFixed(2)}<small> 热度</small></span>
+      </div>
+      <div class="trope-meta">
+        <span>环比 <b class="${dCls}">${dSign}${t.delta}%</b></span>
+        <span>市场 <b>${t.region}</b></span>
+        <span>跨作品 <b>${t.works}</b></span>
+        ${t.high_signal?'<span class="chip">high-signal</span>':''}
+      </div>
+      <div class="trope-def"><span class="lbl">释义</span>${t.definition||'—'}</div>
+      ${evi?`<div class="trope-evi"><span class="lbl">证据</span>${evi}</div>`:''}
+      ${aliases?`<div class="trope-aliases">别名：${aliases}</div>`:''}
+    </div>`;
+  }).join('') || '<div style="color:var(--faint);font-size:13px">该市场下暂无设定点。</div>';
+}
+
+function renderRecipes(){
+  if(!DATA.recipes.length){ $('#recipeList').innerHTML='<div style="color:var(--faint);font-size:12.5px">暂无高频共现组合。</div>'; return; }
+  $('#recipeList').innerHTML = DATA.recipes.map(r=>`
+    <div class="recipe">
+      <span class="mem">${r.members[0]}</span><span class="x">×</span><span class="mem">${r.members[1]}</span>
+      <span class="rh">${r.heat.toFixed(2)}</span>
+      <span class="cnt">共现 ${r.count} 次 · lift ${r.lift}</span>
+    </div>`).join('');
+}
+
+function renderNewWords(){
+  if(!DATA.new_words.length){ $('#newWordList').innerHTML='<div style="color:var(--faint);font-size:12.5px">无新词提案（词表覆盖良好）。</div>'; return; }
+  $('#newWordList').innerHTML = DATA.new_words.map(n=>`
+    <div class="newword"><span class="w">${n.candidate}</span><span class="r">${n.count} 次 · ${(n.reasons||[]).join('；')}</span></div>`).join('');
+}
+
+function renderSignals(){
+  const s = DATA.signal_layer;
+  const rows = [
+    {k:'ship / OTP 提及', v:s.ship_otp},
+    {k:'二创/同人产量信号', v:s.fanworks},
+    {k:'争议/负面信号', v:s.controversy}
+  ];
+  $('#sigList').innerHTML = rows.map(r=>`<div class="sig-row"><span class="k">${r.k}</span><span class="v">${r.v}</span></div>`).join('');
+}
+
+function renderInsight(){
+  const tropes = DATA.tropes;
+  const top = tropes.slice(0,3).map(t=>t.tag).join('、');
+  const surge = tropes.filter(t=>t.delta>=50).slice(0,3).map(t=>t.tag).join('、')||'暂无显著突增';
+  const recipes = DATA.recipes.slice(0,2).map(r=>r.members.join('×')).join('、')||'暂无';
+  const nw = DATA.new_words.map(n=>n.candidate).slice(0,3).join('、')||'无';
+  $('#insightBody').innerHTML = `
+    <div class="lead">基于 ${DATA.meta.sample_count} 条真实内容抽取的即时洞察：</div>
+    <ul>
+      <li>当前热度前三的设定点为「${top}」，是立项与题材选型的最强信号；</li>
+      <li>声量突增（Δ≥50%）的设定点：「${surge}」，适合买量素材锚点快速跟进；</li>
+      <li>高频共现组合：「${recipes}」，代表已被验证的题材配方，可直接进入策划评估；</li>
+      <li>词表外新词提案：「${nw}」，需策展人确认是否转正为正式设定点。</li>
+    </ul>`;
+}
+
+function renderFoot(){
+  $('#foot').innerHTML = `生成于 ${DATA.meta.generated} · 抽取=DeepSeek V4 Pro（thinking disabled） · 热度=去量纲引擎（log1p+z-score+MAD） · 信号为模拟值，待接 X/TikTok/AO3/商店榜`;
+  $('#bnCount').textContent = DATA.meta.sample_count;
+}
+
+function bindCtrls(){
+  $('#marketCtrl').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    state.m=b.dataset.m;
+    $$('#marketCtrl button').forEach(x=>x.classList.toggle('on',x===b));
+    renderTropes();
+  });
+}
+
+function init(){
+  renderKPI(); renderTropes(); renderRecipes(); renderNewWords(); renderSignals(); renderInsight(); renderFoot(); bindCtrls();
+}
+init();
+</script>
+</body>
+</html>

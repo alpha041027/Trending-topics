@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HerPulse · 海外女性向内容热点看板</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f6f2f7; --card:#ffffff; --ink:#2b2430; --muted:#7a7180; --faint:#a79aa8;
+    --line:#ece4ef; --rose:#d4537e; --rose-soft:#fbeaf0; --violet:#7f77dd; --violet-soft:#eeedfe;
+    --teal:#1d9e75; --coral:#d85a30; --amber:#ba7517; --blue:#378add; --gray:#b4b2a9;
+    --r-lg:16px; --r-md:12px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.6;padding:20px 24px 40px}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* top bar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:14px}
+  .logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,var(--rose),var(--violet));display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:600}
+  .brand h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+  .brand p{font-size:12.5px;color:var(--muted)}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .ctrl{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:2px}
+  .ctrl button{border:none;background:transparent;padding:7px 14px;border-radius:9px;font-size:13px;color:var(--muted);cursor:pointer;transition:.15s;white-space:nowrap}
+  .ctrl button.on{background:var(--rose);color:#fff}
+  .ctrl-label{font-size:12px;color:var(--faint);margin-right:2px}
+
+  /* kpi */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px}
+  .kpi .t{font-size:13px;color:var(--muted)}
+  .kpi .v{font-size:28px;font-weight:600;margin:4px 0 2px}
+  .kpi .d{font-size:12.5px;color:var(--muted)}
+  .up{color:var(--teal)} .warn{color:var(--coral)}
+
+  /* layout */
+  .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-bottom:14px}
+  .grid.eq{grid-template-columns:1fr 1fr}
+  @media(max-width:860px){.grid,.grid.eq{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 20px;transition:opacity .2s,border .2s}
+  .card.hl{border-color:var(--rose);box-shadow:0 0 0 3px var(--rose-soft)}
+  .card.dim{opacity:.45}
+  .card header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .card h2{font-size:15px;font-weight:600}
+  .card .sub{font-size:12px;color:var(--faint)}
+  .badge{font-size:11px;color:var(--rose);background:var(--rose-soft);padding:2px 9px;border-radius:20px}
+
+  /* tabs */
+  .tabs{display:flex;background:var(--bg);border-radius:10px;padding:3px;gap:2px}
+  .tabs button{border:none;background:transparent;padding:5px 12px;border-radius:8px;font-size:12.5px;color:var(--muted);cursor:pointer}
+  .tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+  /* ranking */
+  .rank-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f4eef6}
+  .rank-item:last-child{border-bottom:none}
+  .rk{width:22px;height:22px;border-radius:7px;background:var(--bg);color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .rank-item:nth-child(1) .rk{background:var(--rose);color:#fff}
+  .rank-item:nth-child(2) .rk{background:var(--violet);color:#fff}
+  .rank-item:nth-child(3) .rk{background:var(--amber);color:#fff}
+  .ri-main{flex:1;min-width:0}
+  .ri-name{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ri-name small{color:var(--faint);font-weight:400;margin-left:6px;font-size:12px}
+  .ri-bar{height:6px;background:var(--bg);border-radius:6px;margin-top:6px;overflow:hidden}
+  .ri-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--rose),var(--violet))}
+  .ri-heat{width:64px;text-align:right;font-size:13px;font-weight:600;flex:none}
+  .ri-delta{width:58px;text-align:right;font-size:12px;flex:none}
+  .pos{color:var(--teal)} .neg{color:var(--coral)}
+
+  /* trope cards */
+  .trope-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:1000px){.trope-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:640px){.trope-grid{grid-template-columns:1fr}}
+  .trope{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+  .trope-head{display:flex;align-items:baseline;gap:8px}
+  .trope-rk{width:20px;height:20px;border-radius:6px;background:var(--rose);color:#fff;font-size:11.5px;display:flex;align-items:center;justify-content:center;flex:none}
+  .trope:nth-child(2) .trope-rk{background:var(--violet)}
+  .trope:nth-child(3) .trope-rk{background:var(--amber)}
+  .trope-zh{font-size:14.5px;font-weight:600}
+  .trope-en{font-size:11px;color:var(--faint)}
+  .trope-delta{margin-left:auto;font-size:12px;font-weight:600}
+  .trope-heat{display:flex;align-items:baseline;gap:6px}
+  .trope-heat .num{font-size:22px;font-weight:600}
+  .lbl2{font-size:11px;color:var(--faint)}
+  .trope-region{margin-left:auto;font-size:11px;color:var(--violet);background:var(--violet-soft);padding:1px 8px;border-radius:6px}
+  .lbl{font-size:11px;color:var(--muted);font-weight:600;margin-right:6px}
+  .trope-def{font-size:12.5px;color:var(--ink);line-height:1.55}
+  .trope-src{font-size:12px;color:var(--muted);line-height:1.5}
+  .trope-tags i,.trope-cases i{font-style:normal;font-size:11px;padding:1px 7px;border-radius:6px;margin-right:4px;white-space:nowrap}
+  .trope-tags i{background:var(--bg);color:var(--muted)}
+  .trope-cases i{background:var(--rose-soft);color:var(--rose)}
+  .srctext{display:block;margin-top:5px}
+  .trope-note{margin-top:14px;font-size:11.5px;color:var(--faint);border-top:1px dashed var(--line);padding-top:10px}
+
+  /* alerts */
+  .alert{border:1px solid var(--line);border-left:3px solid var(--rose);border-radius:var(--r-md);padding:11px 14px;margin-bottom:10px}
+  .alert:last-child{margin-bottom:0}
+  .alert.high{border-left-color:var(--coral)}
+  .alert-top{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+  .alert-tag{font-size:11px;padding:1px 8px;border-radius:6px;background:var(--rose-soft);color:var(--rose)}
+  .alert-tag.violet{background:var(--violet-soft);color:var(--violet)}
+  .alert-name{font-size:13.5px;font-weight:600}
+  .alert-surge{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--coral)}
+  .alert-note{font-size:12.5px;color:var(--muted)}
+
+  /* insight */
+  .insight-body{font-size:14px;color:var(--ink)}
+  .insight-body .lead{font-size:14.5px;line-height:1.7}
+  .insight-body ul{margin-top:10px;list-style:none}
+  .insight-body li{position:relative;padding-left:18px;margin-bottom:8px;font-size:13px;color:var(--muted)}
+  .insight-body li::before{content:"";position:absolute;left:0;top:8px;width:8px;height:8px;border-radius:3px;background:var(--violet)}
+
+  .chart-box{position:relative;height:240px}
+  .chart-box.sm{height:210px}
+  footer{margin-top:20px;text-align:center;font-size:12px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">◆</div>
+      <div>
+        <h1>HerPulse · 海外女性向内容热点看板</h1>
+        <p>MVP 原型 · 欧美优先 → 日韩 · 品类：乙女 / 互动叙事 / AI 陪伴（不含 BL）</p>
+      </div>
+    </div>
+    <div class="controls">
+      <span class="ctrl-label">视角</span>
+      <div class="ctrl" id="roleCtrl">
+        <button data-role="product" class="on">产品策划</button>
+        <button data-role="market">市场买量</button>
+        <button data-role="ops">内容运营</button>
+      </div>
+      <span class="ctrl-label">粒度</span>
+      <div class="ctrl" id="granCtrl">
+        <button data-gran="daily" class="on">日更</button>
+        <button data-gran="weekly">周更</button>
+      </div>
+      <span class="ctrl-label">市场</span>
+      <div class="ctrl" id="marketCtrl">
+        <button data-market="EUUS" class="on">欧美</button>
+        <button data-market="JPKR">日韩</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid">
+    <section class="card" id="sec-rank">
+      <header>
+        <h2>热度榜单</h2>
+        <div class="tabs" id="rankTabs">
+          <button data-tab="works" class="on">作品</button>
+          <button data-tab="chars">角色</button>
+        </div>
+      </header>
+      <div id="rankList"></div>
+    </section>
+    <section class="card" id="sec-region">
+      <header><h2>地区热度</h2><span class="sub">声量指数 · 分市场</span></header>
+      <div class="chart-box sm"><canvas id="regionChart"></canvas></div>
+    </section>
+  </div>
+
+  <section class="card" id="sec-trope">
+    <header>
+      <h2>题材热榜 · 深度解析</h2>
+      <span class="sub">释义 · 热度来源 · 代表案例（示例数据）</span>
+    </header>
+    <div class="trope-grid" id="tropeGrid"></div>
+    <p class="trope-note">正式版说明：题材库由领域知识图谱维护（支持 20+ 题材分类与层级），每条题材的「释义」来自术语库、「热度来源」由多源数据与 LLM 自动聚合、「案例」由作品库关联生成；此处为演示用的示例内容。</p>
+  </section>
+
+  <div class="grid">
+    <section class="card" id="sec-trend">
+      <header><h2>声量趋势</h2><span class="sub" id="trendSub">近 14 天 · 全平台讨论</span></header>
+      <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    </section>
+    <section class="card" id="sec-sent">
+      <header><h2>舆情情感分布</h2><span class="sub">评论 / 帖子情绪</span></header>
+      <div class="chart-box sm"><canvas id="sentChart"></canvas></div>
+    </section>
+  </div>
+
+  <div class="grid eq">
+    <section class="card" id="sec-alert">
+      <header><h2>突增预警</h2><span class="badge">实时</span></header>
+      <div id="alertList"></div>
+    </section>
+    <section class="card" id="sec-insight">
+      <header><h2>AI 热点洞察</h2><span class="sub" id="insightRole">产品策划视角</span></header>
+      <div class="insight-body" id="insightBody"></div>
+    </section>
+  </div>
+
+  <footer>示例数据 · MVP 原型 · 数据源示意：X / TikTok / Reddit / AO3 / App Store / Google Trends · 更新粒度支持日更 / 周更</footer>
+</div>
+
+<script>
+const C = {rose:'#d4537e',violet:'#7f77dd',teal:'#1d9e75',coral:'#d85a30',amber:'#ba7517',blue:'#378add',gray:'#b4b2a9'};
+
+const KPI = [
+  {t:'追踪作品数', v:'328', d:'<span class="up">+12</span> 本周新纳入', icon:'◆'},
+  {t:'本周新增热点', v:'17', d:'题材 6 · 角色 7 · 玩法 4'},
+  {t:'总声量指数', v:'1,284K', d:'<span class="up">+18%</span> 环比'},
+  {t:'突增预警', v:'6', d:'<span class="warn">2 项高优</span> · 4 项关注'}
+];
+
+const RANK = {
+  works: {
+    EUUS: [
+      {name:'Love and Deepspace', tag:'乙女', heat:98.6, delta:12},
+      {name:'Talkie · AI 陪伴', tag:'AI', heat:87.2, delta:34},
+      {name:'Romance Club', tag:'互动叙事', heat:76.5, delta:8},
+      {name:'Obey Me! Nightbringer', tag:'乙女', heat:65.8, delta:-3},
+      {name:'Tears of Themis', tag:'乙女', heat:58.3, delta:5},
+      {name:'Duskwood', tag:'互动叙事', heat:49.7, delta:21}
+    ],
+    JPKR: [
+      {name:'恋と深空（日服）', tag:'乙女', heat:96.4, delta:18},
+      {name:'Obey Me! Nightbringer', tag:'乙女', heat:81.0, delta:6},
+      {name:'Twisted Wonderland', tag:'女性向', heat:72.6, delta:2},
+      {name:'未定事件簿（日服）', tag:'乙女', heat:66.9, delta:9},
+      {name:'Picka（ピカ）', tag:'互动叙事', heat:55.4, delta:27},
+      {name:'Mystic Messenger', tag:'乙女', heat:47.8, delta:-5}
+    ]
+  },
+  chars: {
+    EUUS: [
+      {name:'Sylus', tag:'Love and Deepspace', heat:95.2, delta:22},
+      {name:'Zayne', tag:'Love and Deepspace', heat:88.4, delta:9},
+      {name:'Rafayel', tag:'Love and Deepspace', heat:83.1, delta:15},
+      {name:'Xavier', tag:'Love and Deepspace', heat:79.6, delta:4},
+      {name:'Barbatos', tag:'Obey Me!', heat:52.3, delta:-2},
+      {name:'Artem Wing', tag:'Tears of Themis', heat:46.9, delta:7}
+    ],
+    JPKR: [
+      {name:'Sylus（シラス）', tag:'恋と深空', heat:93.7, delta:26},
+      {name:'Zayne（ゼイン）', tag:'恋と深空', heat:85.2, delta:11},
+      {name:'Malleus', tag:'Twisted Wonderland', heat:74.8, delta:6},
+      {name:'Azul', tag:'Twisted Wonderland', heat:66.3, delta:-1},
+      {name:'V', tag:'Mystic Messenger', heat:51.6, delta:13},
+      {name:'Mammon', tag:'Obey Me!', heat:48.0, delta:4}
+    ]
+  }
+};
+
+const TROPES = [
+  {en:'Enemies to Lovers', zh:'相爱相杀', heat:92.0, delta:19, region:'欧美',
+   def:'从对立、敌意出发，在冲突与较量中逐渐相爱，卖点是张力与反转。',
+   src:'X #EnemiesToLovers 话题连续两周领涨，AO3 同人 tag 增速最快，TikTok 剪辑二创是主要推手。',
+   tags:['X','TikTok','AO3'], cases:['Love and Deepspace','Romance Club','Tears of Themis']},
+  {en:'Younger / 养成系', zh:'年下 · 养成系', heat:85.7, delta:28, region:'欧美',
+   def:'男主年龄小于女主、或由女主「养成」，突出依赖感与角色成长。',
+   src:'X #youngerboyfriend 标签 3 天讨论量 +2.1 倍，Tumblr 同人圈带动，与「年下」人设新卡面释出强相关。',
+   tags:['X','Tumblr','TikTok'], cases:['Love and Deepspace（Rafayel）','Obey Me!','互动小说']},
+  {en:'Dark Romance', zh:'黑化 · 囚禁系', heat:78.3, delta:11, region:'欧美',
+   def:'占有欲强、带危险气质或「黑化」的男主，主打虐恋与强控制张力。',
+   src:'TikTok #darkromance 话题高热，Reddit r/RomanceBooks 讨论活跃，AI 陪伴角色加重了该题材供给。',
+   tags:['TikTok','Reddit','X'], cases:['Romance Club','Love and Deepspace（Sylus）','AI 陪伴角色']},
+  {en:'Slow Burn', zh:'慢热拉扯', heat:71.5, delta:6, region:'全球',
+   def:'感情线缓慢推进、暧昧期长，靠情绪累积与细节刻画打动。',
+   src:'Tumblr 与 AO3 长期稳定的高留存 tag，YouTube 实况「名场面」剪辑持续为作品引流。',
+   tags:['Tumblr','AO3','YouTube'], cases:['Tears of Themis','Twisted Wonderland','Romance Club']},
+  {en:'Second Lead', zh:'男二逆袭', heat:64.8, delta:14, region:'全球',
+   def:'男二/配角人气反超官方男主，引发「意难平」讨论与粉丝站队。',
+   src:'X 角色人气投票、Reddit 争论贴与 Discord 社群话题共同推高，争议即热度。',
+   tags:['X','Reddit','Discord'], cases:['Obey Me!','Mystic Messenger','恋爱互动小说']},
+  {en:'Self-insert 梦向', zh:'梦向 · 代入', heat:58.2, delta:9, region:'日韩',
+   def:'玩家以自我/自设形象代入剧情，强调「我」与角色的关系。',
+   src:'X #selfship 与日韩同人圈活跃，女性向手游「自设」功能与周边带动声量。',
+   tags:['X','同人圈','TikTok'], cases:['恋と深空','未定事件簿','女性向手游']},
+  {en:'Fake Dating', zh:'契约恋爱', heat:53.4, delta:7, region:'欧美',
+   def:'因约定假扮情侣/契约婚姻，最终假戏真做的经典套路。',
+   src:'TikTok #fakedating 与互动小说新章节上线同频，AO3 二创持续补充长尾热度。',
+   tags:['TikTok','AO3','X'], cases:['Episode','Choices','Romance Club']},
+  {en:'White-Cut-Black 反转', zh:'白切黑 · 反转人设', heat:49.9, delta:12, region:'日韩',
+   def:'表面温柔纯良、实际腹黑或深藏不露，反差感与「掉马」瞬间是爽点。',
+   src:'日韩 X 与海外 Bilibili 二创活跃，角色「黑化」PV 释出即冲榜。',
+   tags:['X','Bilibili(海外)','TikTok'], cases:['Twisted Wonderland','恋と深空','乙女游戏']},
+  {en:'Mutual Pining', zh:'双向暗恋', heat:46.2, delta:5, region:'全球',
+   def:'双方互相暗恋却不敢挑明，靠误会与试探推动剧情。',
+   src:'AO3 稳定长尾 tag，Tumblr 图文分析与 X 梗图传播为主，无爆点但持续。',
+   tags:['AO3','Tumblr','X'], cases:['Tears of Themis','校园向互动小说','恋爱模拟']},
+  {en:'Marriage First', zh:'先婚后爱', heat:42.8, delta:9, region:'欧美',
+   def:'先结婚/同居再培养感情，聚焦责任与情感的转变过程。',
+   src:'TikTok 短剧带火，互动影视与互动小说同步跟进，东南亚市场增速明显。',
+   tags:['TikTok','X','短剧'], cases:['Episode','Chapters','互动影视']},
+  {en:'Grumpy × Sunshine', zh:'冷面配阳光', heat:38.5, delta:4, region:'欧美',
+   def:'高冷/毒舌男主 × 开朗积极女主，性格反差 CP。',
+   src:'TikTok 剪辑 + AO3 配对 tag 稳定供给，属于长红基础款题材。',
+   tags:['TikTok','X','AO3'], cases:['Obey Me!','互动小说','恋爱模拟']},
+  {en:'Quick Transmigration', zh:'无限流 · 快穿', heat:33.1, delta:16, region:'日韩',
+   def:'主角穿越多个世界/副本做任务，每个世界一段关系线。',
+   src:'网文 IP 改编带动，日韩新兴、欧美处于早期，增速快但基数低。',
+   tags:['X','网文圈','视觉小说'], cases:['互动小说改编','视觉小说','网文 IP']}
+];
+
+const REGION = {
+  EUUS:[['美国',92],['英国',68],['德国',61],['法国',57],['巴西',74],['加拿大',49]],
+  JPKR:[['日本',88],['韩国',81],['美国',76],['台湾地区',59],['新加坡',44],['泰国',41]]
+};
+
+const TREND = {
+  daily:{labels:['09-01','09-02','09-03','09-04','09-05','09-06','09-07','09-08','09-09','09-10','09-11','09-12','09-13','09-14'],
+    EUUS:[42,45,48,46,52,58,61,60,66,71,69,78,85,90],
+    JPKR:[38,40,43,41,47,50,53,52,58,62,64,70,74,79]},
+  weekly:{labels:['07-21','07-28','08-04','08-11','08-18','08-25','09-01','09-08'],
+    EUUS:[38,42,45,49,55,60,68,82],
+    JPKR:[35,38,41,44,48,53,60,71]}
+};
+
+const ALERTS = [
+  {tag:'题材', tagCls:'violet', name:'年下 / 养成系', market:'欧美', surge:'+128%', note:'X 平台 #youngerboyfriend 标签 3 天讨论量增长 2.1 倍', high:false},
+  {tag:'作品', name:'Picka', market:'日韩', surge:'+94%', note:'新章节上线带动预约与社群讨论激增', high:false},
+  {tag:'角色', name:'Sylus', market:'欧美', surge:'+77%', note:'新卡面 PV 释出，同人创作 24h 破千', high:true},
+  {tag:'玩法', tagCls:'violet', name:'AI 陪伴', market:'欧美', surge:'+65%', note:'Talkie 恋爱角色周新增讨论持续走高', high:true}
+];
+
+const INSIGHT = {
+  product:{
+    role:'产品策划视角',
+    lead:'未来 1–2 周建议重点评估两类方向：',
+    items:[
+      '「年下养成系」与「Dark Romance」在欧美声量同步上行，可纳入新企划立项评估池；',
+      '日韩市场互动叙事（Picka 类章节制）增速最快，值得研究其付费与留存结构；',
+      '「AI 陪伴」玩法热度持续攀升，建议立项讨论 AI 恋爱角色与女性向叙事的结合点。'
+    ]
+  },
+  market:{
+    role:'市场买量视角',
+    lead:'投放与素材策略提示：',
+    items:[
+      '欧美素材锚点建议「Enemies to Lovers」题材 + AI 陪伴玩法，与当前声量峰值重合；',
+      '巴西市场声量异动显著、买量成本相对低，可作为增量投放测试点；',
+      'Sylus 新 PV 是本周最大传播窗口，素材可围绕高讨论角色快速跟投。'
+    ]
+  },
+  ops:{
+    role:'内容运营视角',
+    lead:'社区运营本周动作建议：',
+    items:[
+      '争议情绪集中在「剧情虐心 / 刀」节点，需提前准备情绪引导与安抚话术；',
+      'Sylus 新 PV 引发二创热潮，建议联动同人活动承接流量；',
+      '负面舆情占比 11%，主要集中在付费礼包定价，建议监测并上报。'
+    ]
+  }
+};
+
+const ROLE_MAP = {
+  product:{sections:['sec-rank','sec-region','sec-trope','sec-trend','sec-insight']},
+  market:{sections:['kpis','sec-region','sec-trend','sec-alert']},
+  ops:{sections:['sec-sent','sec-alert','sec-insight','sec-rank']}
+};
+
+let state = {role:'product', gran:'daily', market:'EUUS', tab:'works'};
+let charts = {};
+
+function $(s){return document.querySelector(s)}
+function $$(s){return document.querySelectorAll(s)}
+
+function renderKPIs(){
+  $('#kpis').innerHTML = KPI.map(k=>`
+    <div class="kpi"><div class="t">${k.t}</div><div class="v">${k.v}</div><div class="d">${k.d}</div></div>`).join('');
+}
+
+function renderRank(){
+  const data = RANK[state.tab][state.market];
+  const max = data[0].heat;
+  $('#rankList').innerHTML = data.map((it,i)=>{
+    const deltaCls = it.delta>=0?'pos':'neg';
+    const sign = it.delta>=0?'+':'';
+    return `<div class="rank-item">
+      <div class="rk">${i+1}</div>
+      <div class="ri-main">
+        <div class="ri-name">${it.name}<small>${it.tag}</small></div>
+        <div class="ri-bar"><div class="ri-fill" style="width:${it.heat/max*100}%"></div></div>
+      </div>
+      <div class="ri-heat">${it.heat.toFixed(1)}</div>
+      <div class="ri-delta ${deltaCls}">${sign}${it.delta}%</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTropes(){
+  $('#tropeGrid').innerHTML = TROPES.map((t,i)=>{
+    const d = t.delta>=0?'pos':'neg';
+    const s = t.delta>=0?'+':'';
+    return `<div class="trope">
+      <div class="trope-head">
+        <span class="trope-rk">${i+1}</span>
+        <span class="trope-zh">${t.zh}</span>
+        <span class="trope-en">${t.en}</span>
+        <span class="trope-delta ${d}">${s}${t.delta}%</span>
+      </div>
+      <div class="trope-heat">
+        <span class="num">${t.heat.toFixed(1)}</span>
+        <span class="lbl2">热度指数</span>
+        <span class="trope-region">${t.region}</span>
+      </div>
+      <div class="trope-def"><span class="lbl">释义</span>${t.def}</div>
+      <div class="trope-src">
+        <span class="lbl">来源</span>
+        <span class="trope-tags">${t.tags.map(x=>`<i>${x}</i>`).join('')}</span>
+        <span class="srctext">${t.src}</span>
+      </div>
+      <div class="trope-cases"><span class="lbl">案例</span>${t.cases.map(c=>`<i>${c}</i>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function buildCharts(){
+  const gridColor = '#f0eaf2';
+  Chart.defaults.font.family = 'system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif';
+  Chart.defaults.color = '#a79aa8';
+
+  charts.region = new Chart($('#regionChart'),{
+    type:'bar',
+    data:{labels:[],datasets:[{data:[],borderRadius:8,barThickness:18}]},
+    options:{indexAxis:'y',maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gridColor},border:{display:false},ticks:{display:false}},
+              y:{grid:{display:false},border:{display:false}}}}
+  });
+
+  charts.trend = new Chart($('#trendChart'),{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'欧美',data:[],borderColor:C.rose,backgroundColor:'rgba(212,83,126,.12)',fill:true,tension:.4,borderWidth:2.5,pointRadius:0,pointHoverRadius:5},
+      {label:'日韩',data:[],borderColor:C.violet,backgroundColor:'rgba(127,119,221,.10)',fill:true,tension:.4,borderWidth:2.5,pointRadius:0,pointHoverRadius:5}
+    ]},
+    options:{maintainAspectRatio:false,plugins:{legend:{position:'top',align:'end',labels:{usePointStyle:true,boxWidth:8}}},
+      scales:{x:{grid:{display:false},border:{display:false}},y:{grid:{color:gridColor},border:{display:false}}}}
+  });
+
+  charts.sent = new Chart($('#sentChart'),{
+    type:'doughnut',
+    data:{labels:['正面','中性','负面/争议'],datasets:[{data:[62,27,11],backgroundColor:[C.teal,C.gray,C.coral],borderWidth:0,hoverOffset:6}]},
+    options:{maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8}}}}
+  });
+}
+
+function updateCharts(){
+  const t = TREND[state.gran];
+  const r = REGION[state.market];
+  charts.trend.data.labels = t.labels;
+  charts.trend.data.datasets[0].data = t.EUUS;
+  charts.trend.data.datasets[1].data = t.JPKR;
+  charts.trend.update();
+
+  charts.region.data.labels = r.map(x=>x[0]);
+  charts.region.data.datasets[0].data = r.map(x=>x[1]);
+  charts.region.data.datasets[0].backgroundColor = r.map((x,i)=> i<1 ? C.rose : (state.market==='EUUS'?C.coral:C.blue));
+  charts.region.update();
+
+  $('#trendSub').textContent = state.gran==='daily' ? '近 14 天 · 全平台讨论' : '近 8 周 · 全平台讨论';
+}
+
+function renderAlerts(){
+  $('#alertList').innerHTML = ALERTS.map(a=>`
+    <div class="alert ${a.high?'high':''}">
+      <div class="alert-top">
+        <span class="alert-tag ${a.tagCls||''}">${a.tag}</span>
+        <span class="alert-name">${a.name}</span>
+        <span class="alert-surge">${a.surge}</span>
+      </div>
+      <div class="alert-note">${a.market} · ${a.note}</div>
+    </div>`).join('');
+}
+
+function renderInsight(){
+  const ins = INSIGHT[state.role];
+  $('#insightRole').textContent = ins.role;
+  $('#insightBody').innerHTML = `<div class="lead">${ins.lead}</div><ul>${ins.items.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+}
+
+function applyRole(){
+  const secs = ROLE_MAP[state.role].sections;
+  ['sec-rank','sec-region','sec-trope','sec-trend','sec-sent','sec-alert','sec-insight'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(secs.includes(id)){ el.classList.add('hl'); el.classList.remove('dim'); }
+    else{ el.classList.remove('hl'); el.classList.add('dim'); }
+  });
+  if(secs.includes('kpis')){ $('#kpis').classList.add('hl'); $('#kpis').classList.remove('dim'); }
+  else{ $('#kpis').classList.remove('hl'); $('#kpis').classList.add('dim'); }
+  renderInsight();
+}
+
+function bindCtrls(){
+  $('#roleCtrl').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    state.role=b.dataset.role;
+    $$('#roleCtrl button').forEach(x=>x.classList.toggle('on',x===b));
+    applyRole();
+  });
+  $('#granCtrl').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    state.gran=b.dataset.gran;
+    $$('#granCtrl button').forEach(x=>x.classList.toggle('on',x===b));
+    updateCharts();
+  });
+  $('#marketCtrl').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    state.market=b.dataset.market;
+    $$('#marketCtrl button').forEach(x=>x.classList.toggle('on',x===b));
+    renderRank(); updateCharts();
+  });
+  $('#rankTabs').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b)return;
+    state.tab=b.dataset.tab;
+    $$('#rankTabs button').forEach(x=>x.classList.toggle('on',x===b));
+    renderRank();
+  });
+}
+
+function init(){
+  renderKPIs();
+  renderRank();
+  renderTropes();
+  renderAlerts();
+  buildCharts();
+  updateCharts();
+  applyRole();
+  bindCtrls();
+}
+
+if(window.Chart){
+  init();
+}else{
+  document.body.innerHTML = '<div style="padding:60px;text-align:center;font-family:sans-serif">图表组件加载失败，请联网后刷新。</div>';
+}
+</script>
+</body>
+</html>

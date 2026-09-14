@@ -1,0 +1,18 @@
+# WorkBuddy 项目内部数据（勿提交）
+.workbuddy/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 运行产物（采集/抽取/聚合的中间产物）
+herpulse/data/extractions_detail*.json
+herpulse/data/predictions*.json
+herpulse/data/probe*.json
+herpulse/data/dashboard_data*.json
+herpulse/data/corpus_reddit_*.json
+herpulse/data/fanwork_ao3_*.json
+herpulse/data/*_local.json
+
+# 自动生成的看板产物（run_local.sh / build_dashboard.py 可重新生成）
+herpulse-dashboard-live.html

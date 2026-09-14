@@ -1,0 +1,8 @@
+# HerPulse 定时采集（VPS 上执行 crontab -e 粘贴，或 crontab deploy/crontab.example 安装）
+# 环境变量建议写在 /etc/environment 或脚本顶部，避免 crontab 里写长 key。
+
+# 日更：每天 UTC 01:00（北京时间 09:00）跑完整 pipeline
+0 1 * * * cd /opt/herpulse && bash deploy/run_pipeline.sh >> /var/log/herpulse.log 2>&1
+
+# 周更：每周一 UTC 01:00
+# 0 1 * * 1 cd /opt/herpulse && bash deploy/run_pipeline.sh >> /var/log/herpulse.log 2>&1

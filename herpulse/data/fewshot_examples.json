@@ -1,0 +1,54 @@
+{
+  "version": "0.1",
+  "note": "few-shot 示例（与金标集完全隔离，仅用于抽取 prompt 的演示）。tag 一律使用受控词表 v0.3 的规范名；多语言别名归一回规范名。",
+  "examples": [
+    {
+      "language": "zh",
+      "text": "新作 PV 公开：星际背景的养成系，男主是长发兽耳少年，年下，慢热治愈向。",
+      "output": {
+        "dimensions": {
+          "relationship": [{ "tag": "年下", "confidence": 0.95, "evidence": "年下" }],
+          "personality": [],
+          "mood": [
+            { "tag": "慢热", "confidence": 0.9, "evidence": "慢热治愈向" },
+            { "tag": "治愈", "confidence": 0.9, "evidence": "慢热治愈向" }
+          ],
+          "occupation_age": [],
+          "appearance": [
+            { "tag": "长发", "confidence": 0.95, "evidence": "长发兽耳少年" },
+            { "tag": "兽耳兽人", "confidence": 0.95, "evidence": "长发兽耳少年" }
+          ],
+          "world": [{ "tag": "星际", "confidence": 0.95, "evidence": "星际背景" }],
+          "gameplay": [{ "tag": "养成系", "confidence": 0.95, "evidence": "养成系" }]
+        },
+        "signal_layer": { "ship_otp": [], "fanworks": [], "controversy": [] },
+        "new_words": [],
+        "language": "zh"
+      }
+    },
+    {
+      "language": "en",
+      "text": "Slow-burn otome with a kuudere CEO love interest who has a secret soft side. Fake dating trope, enemies to lovers.",
+      "output": {
+        "dimensions": {
+          "relationship": [
+            { "tag": "契约恋爱", "confidence": 0.9, "evidence": "Fake dating" },
+            { "tag": "相爱相杀", "confidence": 0.9, "evidence": "enemies to lovers" }
+          ],
+          "personality": [
+            { "tag": "高冷", "confidence": 0.85, "evidence": "kuudere" },
+            { "tag": "白切黑", "confidence": 0.8, "evidence": "secret soft side" }
+          ],
+          "mood": [{ "tag": "慢热", "confidence": 0.9, "evidence": "Slow-burn" }],
+          "occupation_age": [{ "tag": "总裁", "confidence": 0.9, "evidence": "CEO" }],
+          "appearance": [],
+          "world": [],
+          "gameplay": []
+        },
+        "signal_layer": { "ship_otp": [], "fanworks": [], "controversy": [] },
+        "new_words": [],
+        "language": "en"
+      }
+    }
+  ]
+}

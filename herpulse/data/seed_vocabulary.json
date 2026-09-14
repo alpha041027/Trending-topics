@@ -1,0 +1,421 @@
+{
+  "schema_version": "0.3.0",
+  "name": "HerPulse 题材设定点受控词表（P0 修订版）",
+  "note": "叶子为受控词表；tag 为规范名（中文为主，个别保留英文规范名）；aliases 为多语言别名供归一化与 RAG 注入；high_signal 表示『高频且影响选材』，RAG 优先注入；cross_refs 记录跨维度次引用（仅归一/去重提示，不参与热度计数，MECE 单归属以主维度为准）。",
+  "granularity_rule": "叶子设定点必须同时满足：①用户会主动检索/筛选；②能凭一句话原文证据直接判定；③跨作品可复现。不满足者降入新词提案池或梗/meme 层。",
+  "dimensions": [
+    {
+      "key": "relationship",
+      "name": { "zh": "关系动态", "en": "Relationship Dynamics" },
+      "note": "情感·爽点已拆出至「情绪基调·体验」维度（决策③修订）。",
+      "categories": [
+        {
+          "name": "对立·张力",
+          "points": [
+            { "tag": "相爱相杀", "definition": "主角与恋爱对象从敌对/竞争关系发展出感情", "aliases": { "en": ["enemies to lovers", "rivals to lovers"], "ja": ["敵同士の恋"], "ko": ["적대에서 연인"] }, "high_signal": true },
+            { "tag": "追妻火葬场", "definition": "男主前期伤害女主、后期追悔并拼命挽回", "aliases": { "en": ["chasing the wife", "regret arc", "groveling"], "ja": ["追妻火葬場"], "ko": ["아내 뒤쫓기", "후회물"] }, "high_signal": true },
+            { "tag": "死对头", "definition": "长期针锋相对的对手关系", "aliases": { "en": ["rivals"], "ja": ["ライバル"], "ko": ["라이벌"] }, "high_signal": false },
+            { "tag": "契约恋爱", "definition": "因契约/假装而开始的恋爱关系", "aliases": { "en": ["fake dating", "contract relationship", "marriage of convenience"], "ja": ["契約恋愛"], "ko": ["계약연애"] }, "high_signal": true },
+            { "tag": "修罗场", "definition": "多男主争抢/情敌对峙的名场面", "aliases": { "en": ["love triangle showdown", "harem rivalry"], "ja": ["修羅場"], "ko": ["수라장"] }, "high_signal": true }
+          ]
+        },
+        {
+          "name": "年龄差",
+          "points": [
+            { "tag": "年下", "definition": "恋爱对象比主角年龄小", "aliases": { "en": ["younger love interest", "younger ML"], "ja": ["年下"], "ko": ["연하"] }, "high_signal": true, "cross_refs": [{ "dim": "occupation_age", "tag": "奶狗", "note": "年下≈奶狗/狼狗，本维度主归年龄差" }] },
+            { "tag": "年上", "definition": "恋爱对象比主角年龄大", "aliases": { "en": ["older love interest", "older ML"], "ja": ["年上"], "ko": ["연상"] }, "high_signal": true },
+            { "tag": "叔系", "definition": "成熟、有年龄感的男性（大叔型）", "aliases": { "en": ["older man", "uncle type"], "ja": ["おじ系"], "ko": ["아저씨"] }, "high_signal": false, "cross_refs": [{ "dim": "occupation_age", "tag": "大叔", "note": "叔系≈大叔，本维度主归年龄差" }] }
+          ]
+        },
+        {
+          "name": "婚姻·家庭",
+          "points": [
+            { "tag": "先婚后爱", "definition": "先结婚（或定亲）后培养感情", "aliases": { "en": ["marriage before love", "arranged marriage to love"], "ja": ["先婚後愛"], "ko": ["선혼후애"] }, "high_signal": true },
+            { "tag": "破镜重圆", "definition": "分手/离散后再次相遇复合", "aliases": { "en": ["second chance romance", "reunion"], "ja": ["よりを戻す"], "ko": ["재회"] }, "high_signal": false },
+            { "tag": "闪婚", "definition": "相识不久即结婚", "aliases": { "en": ["flash marriage"], "ja": ["電撃結婚"], "ko": ["초고속 결혼"] }, "high_signal": false },
+            { "tag": "同居合租", "definition": "同居/合租/室友关系", "aliases": { "en": ["cohabitation", "roommates to lovers"], "ja": ["同棲", "ルームシェア"], "ko": ["동거", "룸메이트"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "暗恋·单恋",
+          "points": [
+            { "tag": "双向暗恋", "definition": "双方互相喜欢但都未表白", "aliases": { "en": ["mutual pining", "mutual secret crush"], "ja": ["両片思い"], "ko": ["쌍방 짝사랑"] }, "high_signal": false },
+            { "tag": "男二逆袭", "definition": "非第一男主最终赢得女主", "aliases": { "en": ["second male lead wins"], "ja": ["当て馬逆転"], "ko": ["서브남주 역전"] }, "high_signal": false, "cross_refs": [{ "dim": "mood", "tag": "爽文打脸", "note": "男二逆袭(关系动态：非第一男主获胜)↔爽文打脸(情绪：打脸爽感)易混，前者主归 relationship" }] },
+            { "tag": "单向暗恋", "definition": "单方面喜欢对方", "aliases": { "en": ["one-sided love", "unrequited"], "ja": ["片思い"], "ko": ["짝사랑"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "禁忌·越界",
+          "points": [
+            { "tag": "黑化", "definition": "角色从正面转向阴暗/堕落的转变", "aliases": { "en": ["darkening", "corrupted"], "ja": ["闇落ち", "黒化"], "ko": ["흑화"] }, "high_signal": false, "cross_refs": [{ "dim": "personality", "tag": "疯批", "note": "黑化↔疯批语义重叠，主归关系动态" }] },
+            { "tag": "偏执", "definition": "对感情或目标极度执着、不择手段", "aliases": { "en": ["obsessive"], "ja": ["偏執"], "ko": ["집착"] }, "high_signal": false, "cross_refs": [{ "dim": "personality", "tag": "疯批", "note": "偏执↔疯批语义重叠，主归关系动态" }] },
+            { "tag": "囚禁", "definition": "监禁/软禁/束缚型关系", "aliases": { "en": ["confinement", "captivity", "imprisonment"], "ja": ["監禁"], "ko": ["감금"] }, "high_signal": false },
+            { "tag": "师生恋", "definition": "师生/师生恋关系", "aliases": { "en": ["teacher-student romance"], "ja": ["教師生徒の恋"], "ko": ["사제지간"] }, "high_signal": false },
+            { "tag": "伪骨科", "definition": "伪兄妹/义兄妹（无血缘的背德系）", "aliases": { "en": ["fake siblings", "step-siblings romance"], "ja": ["義兄妹", "疑似兄妹"], "ko": ["가짜 남매", "의남매"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "宿命·羁绊",
+          "points": [
+            { "tag": "前世今生", "definition": "前世有纠葛、今生再续/宿命重逢", "aliases": { "en": ["past life lovers", "fated lovers", "reincarnated lovers"], "ja": ["前世からの恋", "宿命"], "ko": ["전생 연인", "숙명"] }, "high_signal": true },
+            { "tag": "竹马", "definition": "青梅竹马、自幼相识", "aliases": { "en": ["childhood friend", "childhood sweetheart"], "ja": ["幼なじみ"], "ko": ["소꿉친구"] }, "high_signal": true },
+            { "tag": "天降", "definition": "突然闯入的恋爱对象（与竹马对位）", "aliases": { "en": ["sudden love interest", "destined newcomer"], "ja": ["天降り"], "ko": ["하늘에서 내려온"] }, "high_signal": true },
+            { "tag": "白月光", "definition": "记忆里难以忘怀的初恋/完美前任", "aliases": { "en": ["first love", "unforgettable past love"], "ja": ["白月光"], "ko": ["백월광"] }, "high_signal": false },
+            { "tag": "失忆", "definition": "失忆后重新相识/寻回记忆", "aliases": { "en": ["amnesia"], "ja": ["記憶喪失"], "ko": ["기억상실"] }, "high_signal": false },
+            { "tag": "替身", "definition": "被当作他人替身的情感关系", "aliases": { "en": ["stand-in lover", "substitute"], "ja": ["身代わり"], "ko": ["대역"] }, "high_signal": false }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "personality",
+      "name": { "zh": "人物性格", "en": "Personality" },
+      "note": "病娇由「关系动态·禁忌越界」迁入（MECE 单归属，与傲娇/腹黑同族）。",
+      "categories": [
+        {
+          "name": "傲娇·反差系",
+          "points": [
+            { "tag": "高冷", "definition": "冷淡、疏离、不易接近", "aliases": { "en": ["kuudere", "cold", "aloof"], "ja": ["クーデレ", "クール"], "ko": ["쿨데레", "차가운"] }, "high_signal": true },
+            { "tag": "傲娇", "definition": "外冷内热、口是心非", "aliases": { "en": ["tsundere"], "ja": ["ツンデレ"], "ko": ["츤데레"] }, "high_signal": true },
+            { "tag": "腹黑", "definition": "表面和善、内心算计", "aliases": { "en": ["scheming", "two-faced", "black-bellied"], "ja": ["腹黒"], "ko": ["흑막"] }, "high_signal": false },
+            { "tag": "白切黑", "definition": "表面温柔纯良、实则腹黑危险，反差感是爽点", "aliases": { "en": ["wolf in sheep's clothing", "secretly dark"], "ja": ["外面は白・内面は黒"], "ko": ["겉다르고 속다른"] }, "high_signal": true },
+            { "tag": "病娇", "definition": "对主角爱到偏执、具独占欲甚至危险的人物", "aliases": { "en": ["yandere", "possessive"], "ja": ["ヤンデレ"], "ko": ["얀데레"] }, "high_signal": true }
+          ]
+        },
+        {
+          "name": "温柔·忠诚",
+          "points": [
+            { "tag": "温柔", "definition": "温和、体贴、照顾人", "aliases": { "en": ["gentle", "soft"], "ja": ["優しい"], "ko": ["다정한"] }, "high_signal": true },
+            { "tag": "忠犬", "definition": "对主角绝对忠诚、像忠犬一样跟随", "aliases": { "en": ["loyal", "puppy-like", "devoted"], "ja": ["忠犬"], "ko": ["충견", "멍뭉미"] }, "high_signal": true },
+            { "tag": "暖男", "definition": "温暖、会照顾人的男性", "aliases": { "en": ["warm", "caring"], "ja": ["癒し系男子"], "ko": ["훈남"] }, "high_signal": false },
+            { "tag": "骑士系", "definition": "忠义、守护、绅士的骑士人格（日乙经典）", "aliases": { "en": ["knightly", "chivalrous"], "ja": ["騎士系"], "ko": ["기사계"] }, "high_signal": true, "cross_refs": [{ "dim": "occupation_age", "tag": "骑士", "note": "骑士系(人格)↔骑士(职业)同源，性格维度主归；原文若明示骑士职业身份(如 a knight)归 occupation_age:骑士" }] }
+          ]
+        },
+        {
+          "name": "强势·危险",
+          "points": [
+            { "tag": "霸总", "definition": "强势、掌控欲强的总裁/上位者", "aliases": { "en": ["domineering CEO", "alpha male"], "ja": ["俺様", "ドS"], "ko": ["도도한"] }, "high_signal": true, "cross_refs": [{ "dim": "occupation_age", "tag": "总裁", "note": "霸总≈总裁，性格维度主归" }] },
+            { "tag": "疯批", "definition": "行为出格、情绪激烈、带危险感", "aliases": { "en": ["unhinged", "feral", "crazy"], "ja": ["狂犬", "イカれ系"], "ko": ["미친개"] }, "high_signal": false },
+            { "tag": "邪魅", "definition": "危险又迷人的反派魅力", "aliases": { "en": ["charming villain", "wicked charm"], "ja": ["邪魅"], "ko": ["사악한 매력"] }, "high_signal": false },
+            { "tag": "恶魔系", "definition": "恶魔/反派气质、危险诱惑", "aliases": { "en": ["devilish", "demonic charm"], "ja": ["悪魔系"], "ko": ["악마계"] }, "high_signal": false, "cross_refs": [{ "dim": "world", "tag": "恶魔地狱", "note": "恶魔系(性格)↔恶魔地狱(世界)↔恶魔角(外观)同源，主归性格" }] }
+          ]
+        },
+        {
+          "name": "钓系·天然",
+          "points": [
+            { "tag": "钓系", "definition": "主动撩人、若即若离的挑逗型", "aliases": { "en": ["tease", "flirtatious bait"], "ja": ["釣り系"], "ko": ["낚시계"] }, "high_signal": false },
+            { "tag": "天然呆", "definition": "不谙世事、反应慢半拍的呆萌", "aliases": { "en": ["airhead", "ditzy"], "ja": ["天然"], "ko": ["천연"] }, "high_signal": false },
+            { "tag": "毒舌", "definition": "说话刻薄犀利", "aliases": { "en": ["sharp-tongued", "sarcastic"], "ja": ["毒舌"], "ko": ["독설가"] }, "high_signal": false },
+            { "tag": "阳光", "definition": "开朗、积极、像太阳一样温暖", "aliases": { "en": ["sunny", "bright", "golden retriever"], "ja": ["陽キャ"], "ko": ["밝은", "햇살"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "特殊·反差",
+          "points": [
+            { "tag": "病弱", "definition": "体弱多病、惹人怜惜", "aliases": { "en": ["sickly", "frail"], "ja": ["病弱"], "ko": ["병약"] }, "high_signal": false },
+            { "tag": "木头迟钝", "definition": "对恋爱迟钝、不解风情", "aliases": { "en": ["dense", "oblivious to love"], "ja": ["鈍感"], "ko": ["둔감"] }, "high_signal": false },
+            { "tag": "天才", "definition": "天才/学霸型", "aliases": { "en": ["genius", "prodigy"], "ja": ["天才"], "ko": ["천재"] }, "high_signal": false },
+            { "tag": "中二", "definition": "中二病、沉浸自我设定", "aliases": { "en": ["chuunibyou", "edgy"], "ja": ["中二病"], "ko": ["중2병"] }, "high_signal": false },
+            { "tag": "天然黑", "definition": "天然却无意识说出残酷话的反差", "aliases": { "en": ["naturally black-bellied", "obliviously cruel"], "ja": ["天然黒"], "ko": ["천연 흑"] }, "high_signal": false },
+            { "tag": "神明系", "definition": "高高在上、不食人间烟火的神性", "aliases": { "en": ["godlike", "divine", "ethereal"], "ja": ["神様系"], "ko": ["신성계"] }, "high_signal": false }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "mood",
+      "name": { "zh": "情绪基调·体验", "en": "Mood & Experience" },
+      "note": "决策③修订：从「关系动态」拆出的整作情绪基调/体验风格；含女主自我定位投射点（大女主/社畜/普女等）。",
+      "categories": [
+        {
+          "name": "情绪基调",
+          "points": [
+            { "tag": "甜宠", "definition": "全程高甜、男主宠溺的轻松向", "aliases": { "en": ["sweet", "fluff", "doting"], "ja": ["甘々", "溺愛"], "ko": ["달달", "애정"] }, "high_signal": true },
+            { "tag": "虐恋", "definition": "以虐心、误解、苦难为主的情感体验", "aliases": { "en": ["angst", "tragic romance"], "ja": ["切ない恋", "悲恋"], "ko": ["피폐물", "애절"] }, "high_signal": true },
+            { "tag": "慢热", "definition": "感情循序渐进、慢火慢炖的节奏（slow-burn）", "aliases": { "en": ["slow burn", "slow-burn"], "ja": ["スローバーン", "じれったい"], "ko": ["슬로우번"] }, "high_signal": true },
+            { "tag": "治愈", "definition": "温暖、舒缓、抚慰人心", "aliases": { "en": ["healing", "comfort"], "ja": ["癒し"], "ko": ["힐링"] }, "high_signal": true },
+            { "tag": "沙雕", "definition": "搞笑、荒诞、无厘头的轻松喜剧", "aliases": { "en": ["crack", "comedy"], "ja": ["ギャグ"], "ko": ["병맛", "개그"] }, "high_signal": false },
+            { "tag": "意难平", "definition": "结局遗憾、令人久久不能释怀", "aliases": { "en": ["regretful ending", "unresolved yearning"], "ja": ["切ない結末"], "ko": ["여운남는 결말"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "爽感·逆袭",
+          "points": [
+            { "tag": "爽文打脸", "definition": "主角逆袭、反派被打脸的高爽感", "aliases": { "en": ["face-slapping", "wish fulfillment"], "ja": ["ざまぁ", "爽快"], "ko": ["사이다", "통쾌"] }, "high_signal": false, "cross_refs": [{ "dim": "mood", "tag": "逆袭", "note": "爽文打脸↔逆袭部分重叠，前者强调打脸场景" }] },
+            { "tag": "大女主", "definition": "女主强势主导、事业/情感双强", "aliases": { "en": ["strong female lead", "girlboss"], "ja": ["大女主"], "ko": ["대여주"] }, "high_signal": true },
+            { "tag": "逆袭", "definition": "主角从低谷逆袭上位", "aliases": { "en": ["comeback", "underdog rise"], "ja": ["逆襲"], "ko": ["역습", "역전"] }, "high_signal": true }
+          ]
+        },
+        {
+          "name": "女主自我定位",
+          "points": [
+            { "tag": "社畜", "definition": "打工人/社畜女主投射", "aliases": { "en": ["corporate slave", "salarywoman"], "ja": ["社畜"], "ko": ["직장인"] }, "high_signal": false },
+            { "tag": "普女", "definition": "普通女孩/平凡女主投射", "aliases": { "en": ["plain girl", "ordinary female lead"], "ja": ["平凡女子"], "ko": ["평범녀"] }, "high_signal": false }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "occupation_age",
+      "name": { "zh": "职业·年龄", "en": "Occupation & Age" },
+      "note": "",
+      "categories": [
+        {
+          "name": "精英职业",
+          "points": [
+            { "tag": "总裁", "definition": "企业总裁/老板/财阀继承人", "aliases": { "en": ["CEO", "boss", "chaebol heir"], "ja": ["社長", "御曹司"], "ko": ["회장님", "대표", "재벌"] }, "high_signal": true, "cross_refs": [{ "dim": "personality", "tag": "霸总", "note": "总裁≈霸总，职业维度主归" }] },
+            { "tag": "医生", "definition": "医生/外科医生", "aliases": { "en": ["doctor", "surgeon"], "ja": ["医者"], "ko": ["의사"] }, "high_signal": false },
+            { "tag": "律师", "definition": "律师", "aliases": { "en": ["lawyer"], "ja": ["弁護士"], "ko": ["변호사"] }, "high_signal": false },
+            { "tag": "军人", "definition": "军官/军人", "aliases": { "en": ["military", "soldier", "officer"], "ja": ["軍人"], "ko": ["군인"] }, "high_signal": false },
+            { "tag": "侦探警察", "definition": "侦探/警察/刑侦", "aliases": { "en": ["detective", "police officer"], "ja": ["探偵", "警察"], "ko": ["형사", "경찰"] }, "high_signal": true, "cross_refs": [{ "dim": "world", "tag": "悬疑推理", "note": "侦探警察↔悬疑推理↔推理解谜三向同源，职业维度主归" }, { "dim": "gameplay", "tag": "推理解谜" }] },
+            { "tag": "教授老师", "definition": "教授/教师", "aliases": { "en": ["professor", "teacher"], "ja": ["教授", "先生"], "ko": ["교수", "선생님"] }, "high_signal": false },
+            { "tag": "黑客", "definition": "黑客/程序员", "aliases": { "en": ["hacker", "programmer"], "ja": ["ハッカー"], "ko": ["해커"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "娱乐·艺术",
+          "points": [
+            { "tag": "明星偶像", "definition": "偶像/明星/演员", "aliases": { "en": ["idol", "celebrity", "actor"], "ja": ["アイドル", "俳優"], "ko": ["아이돌", "연예인"] }, "high_signal": true },
+            { "tag": "电竞选手", "definition": "职业电竞选手/玩家", "aliases": { "en": ["esports player", "gamer"], "ja": ["プロゲーマー"], "ko": ["프로게이머"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "危险·特殊",
+          "points": [
+            { "tag": "特工杀手", "definition": "特工/间谍/杀手", "aliases": { "en": ["spy", "assassin", "agent"], "ja": ["スパイ", "殺し屋"], "ko": ["스파이", "킬러"] }, "high_signal": false },
+            { "tag": "黑道", "definition": "黑帮/极道/雅库扎", "aliases": { "en": ["mafia", "gangster", "yakuza"], "ja": ["ヤクザ", "極道"], "ko": ["조폭", "야쿠자"] }, "high_signal": false },
+            { "tag": "保镖护卫", "definition": "保镖/护卫/贴身保护者", "aliases": { "en": ["bodyguard", "guardian"], "ja": ["ボディーガード"], "ko": ["보디가드"] }, "high_signal": false },
+            { "tag": "怪盗", "definition": "怪盗/侠盗", "aliases": { "en": ["phantom thief", "gentleman thief"], "ja": ["怪盗"], "ko": ["괴도"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "古风·幻想职业",
+          "points": [
+            { "tag": "师尊", "definition": "师父/师尊（仙侠修行语境）", "aliases": { "en": ["master", "shizun", "mentor"], "ja": ["師尊"], "ko": ["사존"] }, "high_signal": true },
+            { "tag": "将军", "definition": "将军/武将", "aliases": { "en": ["general", "warlord"], "ja": ["将軍"], "ko": ["장군"] }, "high_signal": false },
+            { "tag": "帝王", "definition": "皇帝/国王", "aliases": { "en": ["emperor", "king"], "ja": ["皇帝", "王"], "ko": ["황제", "왕"] }, "high_signal": false },
+            { "tag": "魔法使法师", "definition": "魔法使/法师/巫师", "aliases": { "en": ["wizard", "mage", "sorcerer"], "ja": ["魔法使い"], "ko": ["마법사"] }, "high_signal": false },
+            { "tag": "骑士", "definition": "骑士/骑士职业身份", "aliases": { "en": ["knight"], "ja": ["騎士"], "ko": ["기사"] }, "high_signal": false, "cross_refs": [{ "dim": "personality", "tag": "骑士系", "note": "骑士(职业)↔骑士系(人格)同源，职业维度主归" }] },
+            { "tag": "神官祭司", "definition": "神官/祭司/巫女", "aliases": { "en": ["priest", "shrine maiden"], "ja": ["神官", "巫女"], "ko": ["신관", "무녀"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "贵族·王室",
+          "points": [
+            { "tag": "王子王室", "definition": "王子/王室/贵族", "aliases": { "en": ["prince", "royalty", "noble"], "ja": ["王子", "王族"], "ko": ["왕자", "왕족"] }, "high_signal": true, "cross_refs": [{ "dim": "world", "tag": "王室宫廷", "note": "王子王室(职业)↔王室宫廷(世界)↔王冠(外观)同源，职业维度主归" }] },
+            { "tag": "执事", "definition": "执事/管家", "aliases": { "en": ["butler"], "ja": ["執事"], "ko": ["집사"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "年龄定位",
+          "points": [
+            { "tag": "少年", "definition": "年轻、少年感的角色", "aliases": { "en": ["young", "boy"], "ja": ["少年"], "ko": ["소년"] }, "high_signal": false },
+            { "tag": "大叔", "definition": "成熟年长男性", "aliases": { "en": ["older man", "mature"], "ja": ["おじさん"], "ko": ["아저씨"] }, "high_signal": false, "cross_refs": [{ "dim": "relationship", "tag": "叔系", "note": "大叔≈叔系，本维度主归年龄定位" }] },
+            { "tag": "奶狗", "definition": "年下、粘人、依赖感强", "aliases": { "en": ["puppy-like younger", "clingy younger"], "ja": ["年下わんこ"], "ko": ["연하 댕댕이"] }, "high_signal": false, "cross_refs": [{ "dim": "relationship", "tag": "年下", "note": "奶狗≈年下，本维度主归年龄定位" }] },
+            { "tag": "狼狗", "definition": "年下、强势、攻击性强", "aliases": { "en": ["aggressive younger", "wild younger"], "ja": ["年下オオカミ"], "ko": ["연하 늑대"] }, "high_signal": false, "cross_refs": [{ "dim": "relationship", "tag": "年下", "note": "狼狗≈年下，本维度主归年龄定位" }] },
+            { "tag": "学生会长", "definition": "学生会长/优等生", "aliases": { "en": ["student council president"], "ja": ["生徒会長"], "ko": ["학생회장"] }, "high_signal": false }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "appearance",
+      "name": { "zh": "外观设定点", "en": "Appearance" },
+      "note": "决策①：外观设定点单列「素材热点」看板，不进题材热度主榜；但抽取维度保留。",
+      "categories": [
+        {
+          "name": "面部",
+          "points": [
+            { "tag": "泪痣", "definition": "眼下泪痣", "aliases": { "en": ["tear mole", "beauty mark under eye"], "ja": ["泣きぼくろ"], "ko": ["눈물점"] }, "high_signal": false },
+            { "tag": "异色瞳", "definition": "两只眼睛颜色不同", "aliases": { "en": ["heterochromia"], "ja": ["オッドアイ"], "ko": ["오드아이"] }, "high_signal": true },
+            { "tag": "眼镜", "definition": "佩戴眼镜", "aliases": { "en": ["glasses", "bespectacled"], "ja": ["メガネ"], "ko": ["안경"] }, "high_signal": false },
+            { "tag": "眼罩", "definition": "戴眼罩", "aliases": { "en": ["eyepatch"], "ja": ["眼帯"], "ko": ["안대"] }, "high_signal": false },
+            { "tag": "面具", "definition": "佩戴面具", "aliases": { "en": ["mask"], "ja": ["仮面"], "ko": ["가면"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "发型",
+          "points": [
+            { "tag": "长发", "definition": "长头发（男性长发是高频审美点）", "aliases": { "en": ["long hair"], "ja": ["長髪"], "ko": ["장발"] }, "high_signal": true },
+            { "tag": "金发", "definition": "金色头发", "aliases": { "en": ["blonde"], "ja": ["金髪"], "ko": ["금발"] }, "high_signal": false },
+            { "tag": "银发", "definition": "银色/白色头发", "aliases": { "en": ["silver hair", "white hair"], "ja": ["銀髪", "白髪"], "ko": ["은발", "백발"] }, "high_signal": true },
+            { "tag": "卷发", "definition": "卷发", "aliases": { "en": ["curly hair"], "ja": ["巻き毛"], "ko": ["곱슬머리"] }, "high_signal": false },
+            { "tag": "高马尾", "definition": "高马尾发型", "aliases": { "en": ["high ponytail"], "ja": ["ポニーテール"], "ko": ["높은 포니테일"] }, "high_signal": false },
+            { "tag": "双马尾", "definition": "双马尾发型", "aliases": { "en": ["twintails"], "ja": ["ツインテール"], "ko": ["트윈테일"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "配饰·纹身",
+          "points": [
+            { "tag": "耳钉耳环", "definition": "耳钉/耳环/穿孔", "aliases": { "en": ["earring", "piercing"], "ja": ["ピアス"], "ko": ["피어싱"] }, "high_signal": true },
+            { "tag": "纹身", "definition": "纹身/刺青", "aliases": { "en": ["tattoo"], "ja": ["タトゥー", "刺青"], "ko": ["문신"] }, "high_signal": true },
+            { "tag": "制服", "definition": "制服（军服/警服/校服等）", "aliases": { "en": ["uniform"], "ja": ["制服"], "ko": ["제복"] }, "high_signal": true },
+            { "tag": "手套", "definition": "佩戴手套", "aliases": { "en": ["gloves"], "ja": ["手袋"], "ko": ["장갑"] }, "high_signal": false },
+            { "tag": "王冠", "definition": "王冠/皇冠", "aliases": { "en": ["crown"], "ja": ["王冠"], "ko": ["왕관"] }, "high_signal": false, "cross_refs": [{ "dim": "world", "tag": "王室宫廷", "note": "王冠(外观)↔王室宫廷(世界)↔王子王室(职业)同源，外观维度主归" }] }
+          ]
+        },
+        {
+          "name": "异质特征",
+          "points": [
+            { "tag": "兽耳兽人", "definition": "兽耳/兽人/半兽特征", "aliases": { "en": ["kemonomimi", "animal ears", "furry"], "ja": ["獣耳", "ケモノ"], "ko": ["수인귀", "수인"] }, "high_signal": true },
+            { "tag": "尾巴", "definition": "尾巴", "aliases": { "en": ["tail"], "ja": ["尻尾"], "ko": ["꼬리"] }, "high_signal": false },
+            { "tag": "翅膀", "definition": "翅膀", "aliases": { "en": ["wings"], "ja": ["翼"], "ko": ["날개"] }, "high_signal": false },
+            { "tag": "精灵耳", "definition": "尖耳/精灵耳", "aliases": { "en": ["elf ears", "pointed ears"], "ja": ["エルフ耳"], "ko": ["엘프 귀"] }, "high_signal": false, "cross_refs": [{ "dim": "world", "tag": "精灵", "note": "精灵耳(外观)↔精灵(种族)同源，外观维度主归" }] },
+            { "tag": "獠牙", "definition": "吸血鬼獠牙/尖牙", "aliases": { "en": ["fangs", "vampire fangs"], "ja": ["牙"], "ko": ["송곳니"] }, "high_signal": false },
+            { "tag": "恶魔角", "definition": "恶魔角/角", "aliases": { "en": ["horns", "demon horns"], "ja": ["角"], "ko": ["뿔"] }, "high_signal": false, "cross_refs": [{ "dim": "world", "tag": "恶魔地狱", "note": "恶魔角(外观)↔恶魔地狱(世界)↔恶魔系(性格)同源，外观维度主归" }] },
+            { "tag": "机械义肢", "definition": "机械义肢/改造人特征", "aliases": { "en": ["mechanical limb", "cyborg"], "ja": ["機械義肢"], "ko": ["기계 팔"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "体型",
+          "points": [
+            { "tag": "肌肉", "definition": "肌肉发达", "aliases": { "en": ["muscular"], "ja": ["筋肉"], "ko": ["근육"] }, "high_signal": false },
+            { "tag": "高挑", "definition": "身材高挑", "aliases": { "en": ["tall"], "ja": ["高身長"], "ko": ["장신"] }, "high_signal": false },
+            { "tag": "清瘦", "definition": "清瘦、纤瘦", "aliases": { "en": ["slender", "lean"], "ja": ["細身"], "ko": ["마른"] }, "high_signal": false }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "world",
+      "name": { "zh": "世界观·场景", "en": "World & Setting" },
+      "note": "",
+      "categories": [
+        {
+          "name": "幻想",
+          "points": [
+            { "tag": "西幻", "definition": "西方奇幻/中世纪魔法世界", "aliases": { "en": ["western fantasy", "medieval fantasy"], "ja": ["西洋ファンタジー"], "ko": ["서양 판타지"] }, "high_signal": false },
+            { "tag": "仙侠", "definition": "修仙/仙侠世界", "aliases": { "en": ["xianxia", "cultivation"], "ja": ["仙侠"], "ko": ["선협"] }, "high_signal": true },
+            { "tag": "玄幻", "definition": "东方玄幻世界", "aliases": { "en": ["xuanhuan", "eastern fantasy"], "ja": ["玄幻"], "ko": ["현환"] }, "high_signal": false },
+            { "tag": "魔法", "definition": "魔法/魔法元素", "aliases": { "en": ["magic", "magical"], "ja": ["魔法"], "ko": ["마법"] }, "high_signal": false, "cross_refs": [{ "dim": "world", "tag": "西幻", "note": "魔法为西幻世界内元素（包含关系，非并列）" }] },
+            { "tag": "神话", "definition": "神话（希腊/北欧/埃及等）", "aliases": { "en": ["mythology", "myth"], "ja": ["神話"], "ko": ["신화"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "科幻",
+          "points": [
+            { "tag": "星际", "definition": "星际/太空/科幻世界", "aliases": { "en": ["sci-fi", "interstellar", "space"], "ja": ["宇宙", "SF"], "ko": ["우주", "SF"] }, "high_signal": true },
+            { "tag": "赛博朋克", "definition": "赛博朋克世界", "aliases": { "en": ["cyberpunk"], "ja": ["サイバーパンク"], "ko": ["사이버펑크"] }, "high_signal": false },
+            { "tag": "末日废土", "definition": "末日/废土/后启示录", "aliases": { "en": ["post-apocalyptic", "apocalypse"], "ja": ["終末", "ディストピア"], "ko": ["아포칼립스"] }, "high_signal": false },
+            { "tag": "机甲", "definition": "机甲/机器人", "aliases": { "en": ["mecha"], "ja": ["メカ", "ロボット"], "ko": ["메카"] }, "high_signal": false },
+            { "tag": "蒸汽朋克", "definition": "蒸汽朋克/工业革命幻想", "aliases": { "en": ["steampunk"], "ja": ["スチームパンク"], "ko": ["스팀펑크"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "现实",
+          "points": [
+            { "tag": "校园", "definition": "校园/学校背景", "aliases": { "en": ["school", "high school", "college"], "ja": ["学園"], "ko": ["학원"] }, "high_signal": true },
+            { "tag": "职场", "definition": "职场/办公室背景", "aliases": { "en": ["workplace", "office"], "ja": ["職場"], "ko": ["직장"] }, "high_signal": true },
+            { "tag": "娱乐圈", "definition": "娱乐圈/演艺圈背景", "aliases": { "en": ["entertainment industry", "showbiz"], "ja": ["芸能界"], "ko": ["연예계"] }, "high_signal": false },
+            { "tag": "都市", "definition": "现代都市背景", "aliases": { "en": ["urban", "modern"], "ja": ["都会", "現代"], "ko": ["도시"] }, "high_signal": false },
+            { "tag": "历史幕末", "definition": "历史/幕末/战国背景", "aliases": { "en": ["historical", "Bakumatsu era"], "ja": ["幕末", "歴史"], "ko": ["역사", "막말"] }, "high_signal": false },
+            { "tag": "王室宫廷", "definition": "王室/宫廷背景", "aliases": { "en": ["royal court", "palace"], "ja": ["宮廷"], "ko": ["왕궁"] }, "high_signal": false, "cross_refs": [{ "dim": "occupation_age", "tag": "王子王室", "note": "王室宫廷(世界)↔王子王室(职业)↔王冠(外观)同源，世界观主归" }] }
+          ]
+        },
+        {
+          "name": "特殊设定",
+          "points": [
+            { "tag": "无限流", "definition": "无限流/无限维度生存挑战", "aliases": { "en": ["unlimited flow", "infinite-dimension"], "ja": ["無限流"], "ko": ["무한류"] }, "high_signal": true },
+            { "tag": "快穿", "definition": "快速穿越多个世界", "aliases": { "en": ["quick transmigration", "world-hopping"], "ja": ["快穿"], "ko": ["쾌천"] }, "high_signal": false },
+            { "tag": "ABO", "definition": "ABO/Omegaverse 设定", "aliases": { "en": ["omegaverse", "ABO"], "ja": ["オメガバース"], "ko": ["오메가버스"] }, "high_signal": true },
+            { "tag": "穿越", "definition": "穿越/时间旅行", "aliases": { "en": ["time travel", "transmigration"], "ja": ["タイムスリップ", "転生"], "ko": ["회귀", "환생"] }, "high_signal": false },
+            { "tag": "重生", "definition": "重生/再活一次", "aliases": { "en": ["reincarnation", "rebirth"], "ja": ["生まれ変わり"], "ko": ["환생", "회귀"] }, "high_signal": false },
+            { "tag": "超能力", "definition": "超能力/异能/念动力", "aliases": { "en": ["superpower", "psychic ability"], "ja": ["超能力"], "ko": ["초능력"] }, "high_signal": false },
+            { "tag": "塔罗占卜", "definition": "塔罗/占卜/命运预知", "aliases": { "en": ["tarot", "divination", "fortune-telling"], "ja": ["タロット", "占い"], "ko": ["타로", "점"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "超自然·种族",
+          "points": [
+            { "tag": "吸血鬼", "definition": "吸血鬼/血族世界", "aliases": { "en": ["vampire"], "ja": ["吸血鬼"], "ko": ["뱀파이어"] }, "high_signal": true },
+            { "tag": "狼人", "definition": "狼人/人狼世界", "aliases": { "en": ["werewolf"], "ja": ["狼男", "人狼"], "ko": ["늑대인간"] }, "high_signal": false },
+            { "tag": "恶魔地狱", "definition": "恶魔/地狱世界", "aliases": { "en": ["demon", "hell"], "ja": ["悪魔", "地獄"], "ko": ["악마", "지옥"] }, "high_signal": false, "cross_refs": [{ "dim": "personality", "tag": "恶魔系", "note": "恶魔地狱(世界)↔恶魔系(性格)↔恶魔角(外观)同源，世界观主归" }] },
+            { "tag": "龙族", "definition": "龙族/龙裔（韩漫高频）", "aliases": { "en": ["dragon", "dragonkin"], "ja": ["竜族"], "ko": ["용족"] }, "high_signal": true },
+            { "tag": "九尾狐", "definition": "九尾狐/狐妖/狐仙", "aliases": { "en": ["nine-tailed fox", "fox spirit"], "ja": ["九尾の狐", "狐"], "ko": ["구미호"] }, "high_signal": false },
+            { "tag": "人外妖怪", "definition": "人外/妖怪/非人类（日乙核心品类）", "aliases": { "en": ["monster", "non-human", "youkai"], "ja": ["人外", "妖怪"], "ko": ["인외", "요괴"] }, "high_signal": true },
+            { "tag": "幽灵", "definition": "幽灵/鬼魂/幽灵男友", "aliases": { "en": ["ghost", "ghost boyfriend"], "ja": ["幽霊", "幽霊彼氏"], "ko": ["유령", "유령 남자친구"] }, "high_signal": false },
+            { "tag": "天使", "definition": "天使/天界", "aliases": { "en": ["angel"], "ja": ["天使"], "ko": ["천사"] }, "high_signal": false },
+            { "tag": "精灵", "definition": "精灵/妖精（种族）", "aliases": { "en": ["elf", "fairy"], "ja": ["エルフ", "妖精"], "ko": ["엘프", "요정"] }, "high_signal": false, "cross_refs": [{ "dim": "appearance", "tag": "精灵耳", "note": "精灵(种族)↔精灵耳(外观)同源，世界观主归" }] }
+          ]
+        },
+        {
+          "name": "悬疑·惊悚",
+          "points": [
+            { "tag": "悬疑推理", "definition": "悬疑/推理/侦探故事", "aliases": { "en": ["mystery", "suspense", "detective"], "ja": ["ミステリー"], "ko": ["미스터리"] }, "high_signal": false, "cross_refs": [{ "dim": "gameplay", "tag": "推理解谜", "note": "悬疑推理↔推理解谜↔侦探警察三向同源，世界观主归" }] },
+            { "tag": "恐怖", "definition": "恐怖/惊悚氛围", "aliases": { "en": ["horror"], "ja": ["ホラー"], "ko": ["호러"] }, "high_signal": false }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "gameplay",
+      "name": { "zh": "交互·玩法", "en": "Interaction & Gameplay" },
+      "note": "乙女游戏 vs 互动小说 vs AI 陪伴的本质分水岭，也是买量素材核心卖点。",
+      "categories": [
+        {
+          "name": "养成",
+          "points": [
+            { "tag": "养成系", "definition": "培养/养成角色成长", "aliases": { "en": ["raising", "nurturing"], "ja": ["育成系"], "ko": ["육성"] }, "high_signal": true },
+            { "tag": "放置", "definition": "放置类玩法", "aliases": { "en": ["idle"], "ja": ["放置"], "ko": ["방치형"] }, "high_signal": false },
+            { "tag": "经营", "definition": "经营/模拟经营玩法", "aliases": { "en": ["management", "simulation"], "ja": ["経営"], "ko": ["경영"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "叙事",
+          "points": [
+            { "tag": "多结局分支", "definition": "多结局/剧情分支选择", "aliases": { "en": ["branching story", "multiple endings"], "ja": ["マルチエンディング"], "ko": ["멀티 엔딩"] }, "high_signal": true },
+            { "tag": "互动小说", "definition": "互动小说/视觉小说", "aliases": { "en": ["interactive fiction", "visual novel"], "ja": ["インタラクティブノベル"], "ko": ["인터랙티브 소설"] }, "high_signal": true },
+            { "tag": "互动影视", "definition": "互动影视/FMV", "aliases": { "en": ["interactive film", "FMV"], "ja": ["インタラクティブ映画"], "ko": ["인터랙티브 영화"] }, "high_signal": false },
+            { "tag": "UGC创作", "definition": "用户生成内容/玩家投稿", "aliases": { "en": ["user-generated content", "UGC"], "ja": ["UGC", "投稿"], "ko": ["UGC"] }, "high_signal": false },
+            { "tag": "剧情回顾", "definition": "剧情回看/收藏回想", "aliases": { "en": ["story archive", "replay"], "ja": ["回想"], "ko": ["회상"] }, "high_signal": false },
+            { "tag": "结局收集", "definition": "结局收集/全通", "aliases": { "en": ["ending collection"], "ja": ["エンディング収集"], "ko": ["엔딩 수집"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "社交·陪伴",
+          "points": [
+            { "tag": "聊天短信", "definition": "聊天/短信/消息互动", "aliases": { "en": ["chat", "messaging", "texting"], "ja": ["チャット", "メッセージ"], "ko": ["채팅", "문자"] }, "high_signal": true },
+            { "tag": "AI陪伴", "definition": "AI 陪伴/AI 男友", "aliases": { "en": ["AI companion", "AI boyfriend"], "ja": ["AI彼氏", "AIチャット"], "ko": ["AI 남자친구"] }, "high_signal": true },
+            { "tag": "虚拟男友", "definition": "虚拟男友角色", "aliases": { "en": ["virtual boyfriend"], "ja": ["バーチャル彼氏"], "ko": ["가상 남자친구"] }, "high_signal": false },
+            { "tag": "约会系统", "definition": "约会/约会事件", "aliases": { "en": ["date system", "dating"], "ja": ["デート"], "ko": ["데이트"] }, "high_signal": true },
+            { "tag": "好感度系统", "definition": "好感度/亲密度养成", "aliases": { "en": ["affection system", "relationship meter"], "ja": ["好感度"], "ko": ["호감도"] }, "high_signal": true },
+            { "tag": "角色扮演", "definition": "角色扮演/代入扮演", "aliases": { "en": ["roleplay"], "ja": ["ロールプレイ"], "ko": ["롤플레이"] }, "high_signal": false },
+            { "tag": "日常陪伴", "definition": "日常陪伴/日常互动养成", "aliases": { "en": ["daily life", "daily routine"], "ja": ["日常"], "ko": ["일상"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "收集·养成",
+          "points": [
+            { "tag": "抽卡扭蛋", "definition": "抽卡/扭蛋/付费抽取", "aliases": { "en": ["gacha"], "ja": ["ガチャ"], "ko": ["가챠"] }, "high_signal": true },
+            { "tag": "换装", "definition": "换装/外观自定义", "aliases": { "en": ["dress-up", "customization"], "ja": ["着せ替え"], "ko": ["코디"] }, "high_signal": false },
+            { "tag": "图鉴收集", "definition": "图鉴/收集完成度", "aliases": { "en": ["collection", "dex completion"], "ja": ["図鑑"], "ko": ["도감"] }, "high_signal": false }
+          ]
+        },
+        {
+          "name": "机制·对战",
+          "points": [
+            { "tag": "推理解谜", "definition": "推理/解谜玩法", "aliases": { "en": ["puzzle", "mystery solving"], "ja": ["謎解き"], "ko": ["퍼즐"] }, "high_signal": false, "cross_refs": [{ "dim": "world", "tag": "悬疑推理", "note": "推理解谜↔悬疑推理↔侦探警察三向同源，玩法维度主归" }] },
+            { "tag": "卡牌对战", "definition": "卡牌对战/卡牌收集", "aliases": { "en": ["card battle", "deck building"], "ja": ["カードバトル"], "ko": ["카드 배틀"] }, "high_signal": false },
+            { "tag": "音游", "definition": "音乐节奏玩法", "aliases": { "en": ["rhythm game"], "ja": ["音ゲー"], "ko": ["리듬 게임"] }, "high_signal": false }
+          ]
+        }
+      ]
+    }
+  ],
+  "signal_layer": {
+    "name": { "zh": "社区·二创向度", "en": "Community & Fanwork Signals" },
+    "note": "决策④：二创/CP 数据计入题材热度权重（w2=0.30，P1 将改为目标占比 + 回归校准）。",
+    "points": [
+      { "tag": "ship", "definition": "观众对某对 CP/配对的追捧", "aliases": { "en": ["ship", "shipping"], "ja": ["カップリング"], "ko": ["커플링"] } },
+      { "tag": "OTP", "definition": "观众唯一/本命配对", "aliases": { "en": ["OTP", "one true pairing"], "ja": ["推しカプ"], "ko": ["최애 커플"] } },
+      { "tag": "同人产量", "definition": "同人图/文/视频创作量", "aliases": { "en": ["fanworks", "fanart", "fanfic"], "ja": ["同人"], "ko": ["동인"] } },
+      { "tag": "争议翻车", "definition": "争议/翻车/负面舆情", "aliases": { "en": ["controversy", "backlash"], "ja": ["炎上"], "ko": ["논란"] } },
+      { "tag": "出圈", "definition": "突破圈层走向大众", "aliases": { "en": ["breakout", "mainstream"], "ja": ["バズる"], "ko": ["역주행"] } }
+    ]
+  },
+  "meme_layer": {
+    "name": { "zh": "梗/meme 追踪层", "en": "Meme Tracking Layer" },
+    "note": "决策②：梗/meme 单独建追踪层，独立生命周期（快起快落），不进题材受控词表，动态记录。",
+    "examples": ["角色梗", "语音/台词梗", "表情包梗", "表情动作梗"]
+  }
+}

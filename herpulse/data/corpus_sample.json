@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "name": "HerPulse 端到端语料样本",
+    "desc": "海外女性向互动内容真实形态文本（游戏简介/PV文案/角色介绍/社媒帖），覆盖英/日/韩/中多语言，供真实抽取与热度聚合。热度信号(social/fanwork/search/rank)为模拟值（待接真实数据源），day=0 为最近一天、day=13 为 14 天前。",
+    "date": "2026-09-14",
+    "signal_note": "social=社媒讨论量(条), fanwork=二创产量(篇), search=搜索指数(0-100), rank=榜单名次(越小越高)"
+  },
+  "samples": [
+    {"id":"c001","text":"Love and Deepspace — Sylus new card PV: a domineering CEO in a futuristic city, possessive and dangerous, offering a blood contract to the protagonist.","language":"en","market":"EUUS","day":0,"signals":{"social":148000,"fanwork":9200,"search":95,"rank":3}},
+    {"id":"c002","text":"Love and Deepspace — Rafayel: a younger painter boy the heroine raises and slowly grows close to, slow-burn healing romance.","language":"en","market":"EUUS","day":0,"signals":{"social":126000,"fanwork":7800,"search":88,"rank":5}},
+    {"id":"c003","text":"Romance Club new story: enemies to lovers in a vampire court, slow burn with dark possessive prince.","language":"en","market":"EUUS","day":1,"signals":{"social":98000,"fanwork":6100,"search":76,"rank":8}},
+    {"id":"c004","text":"Talkie trending AI companion: a younger wolf-eared boy you raise and train, healing slice-of-life with daily chats.","language":"en","market":"EUUS","day":0,"signals":{"social":112000,"fanwork":4300,"search":71,"rank":7}},
+    {"id":"c005","text":"Obey Me! Nightbringer — a demon prince offers you a pact; demon romance with kuudere and yandere suitors.","language":"en","market":"EUUS","day":2,"signals":{"social":82000,"fanwork":5400,"search":64,"rank":12}},
+    {"id":"c006","text":"Twisted Wonderland — Malleus Draconia: a dragon fae prince, cold and intimidating but secretly soft, white-cut-black reveal.","language":"en","market":"EUUS","day":3,"signals":{"social":69000,"fanwork":7100,"search":58,"rank":15}},
+    {"id":"c007","text":"AO3 tag surge: #SlowBurn and #EnemiesToLovers both up this week, driven by new otome game chapter drops.","language":"en","market":"EUUS","day":1,"signals":{"social":88000,"fanwork":11200,"search":69,"rank":6}},
+    {"id":"c008","text":"TikTok: dark romance / yandere boyfriend trend — obsessive, black-bellied male lead in a forced-marriage story is everywhere.","language":"en","market":"EUUS","day":1,"signals":{"social":134000,"fanwork":6900,"search":82,"rank":4}},
+    {"id":"c009","text":"Reddit r/Otome: the second male lead is more popular than the official LI again — second lead wins discussion thread.","language":"en","market":"EUUS","day":4,"signals":{"social":52000,"fanwork":2100,"search":44,"rank":22}},
+    {"id":"c010","text":"Tears of Themis — Artem Wing: a cold, reserved lawyer with a slow-burn office romance and mystery-solving gameplay.","language":"en","market":"EUUS","day":5,"signals":{"social":47000,"fanwork":2900,"search":41,"rank":26}},
+    {"id":"c011","text":"Duskwood: an interactive thriller where you investigate a disappearance through chat messages, mystery puzzle gameplay.","language":"en","market":"EUUS","day":6,"signals":{"social":41000,"fanwork":1800,"search":38,"rank":31}},
+    {"id":"c012","text":"New PV: sci-fi raising sim, a long-haired wolf-eared younger boy, slow-burn healing story with a star-commander heroine.","language":"en","market":"EUUS","day":0,"signals":{"social":118000,"fanwork":5200,"search":74,"rank":9}},
+    {"id":"c013","text":"Interactive fiction: fake dating with a cold CEO turns into real love, marriage-first arranged contract.","language":"en","market":"EUUS","day":2,"signals":{"social":76000,"fanwork":3400,"search":55,"rank":14}},
+    {"id":"c014","text":"Western fantasy otome: an elf knight swears to protect the heroine, magic academy setting with slow-burn loyalty.","language":"en","market":"EUUS","day":7,"signals":{"social":39000,"fanwork":2600,"search":36,"rank":33}},
+    {"id":"c015","text":"Character AI trending: yandere boyfriend bot — obsessive, dark and black-bellied, popular with AI companion users.","language":"en","market":"EUUS","day":1,"signals":{"social":101000,"fanwork":3700,"search":66,"rank":11}},
+    {"id":"c016","text":"Unlimited flow / quick transmigration webnovel adaptation: heroine clears worlds, revenge and counterattack, rising fast in translation fandom.","language":"en","market":"EUUS","day":3,"signals":{"social":58000,"fanwork":2400,"search":49,"rank":18}},
+    {"id":"c017","text":"Steampunk otome: a detective heroine and a gentleman thief in Victorian city, mystery romance with slow burn.","language":"en","market":"EUUS","day":8,"signals":{"social":33000,"fanwork":1500,"search":31,"rank":40}},
+    {"id":"c018","text":"Angel / divine romance visual novel: a healing story with a heavenly guardian, warm comfort and slow-burn comfort.","language":"en","market":"EUUS","day":9,"signals":{"social":29000,"fanwork":1300,"search":28,"rank":45}},
+    {"id":"c019","text":"恋と深空 — シラス新カードPV：未来都市のドS社長、独占欲が強く危険な雰囲気、主人公と血の契約を交わす。","language":"ja","market":"JPKR","day":0,"signals":{"social":131000,"fanwork":8800,"search":91,"rank":4}},
+    {"id":"c020","text":"未定事件簿 — 左然：クールな弁護士、オフィス恋愛でスローバーン、推理・解谜ゲームプレイ。","language":"ja","market":"JPKR","day":4,"signals":{"social":51000,"fanwork":3100,"search":47,"rank":23}},
+    {"id":"c021","text":"DIABOLIK LOVERS：吸血鬼兄弟に囚われ監禁されるダークな逆ハー、ヤンデレ・ドS・虐恋。","language":"ja","market":"JPKR","day":2,"signals":{"social":72000,"fanwork":4900,"search":60,"rank":13}},
+    {"id":"c022","text":"픽카(Picka) 새 시즌: 재벌과 계약 결혼, 선혼후애, 메시지 채팅으로 진행되는 인터랙티브 스토리.","language":"ko","market":"JPKR","day":1,"signals":{"social":88000,"fanwork":3300,"search":67,"rank":10}},
+    {"id":"c023","text":"Mystic Messenger: 채팅과 전화로 진행되는 인터랙티브, 해커 남주, 미스터리 로맨스.","language":"ko","market":"JPKR","day":5,"signals":{"social":44000,"fanwork":2800,"search":42,"rank":28}},
+    {"id":"c024","text":"재벌 로맨스 드라마: 도도한 재벌 회장과 계약 연애, 달달한 치유와 역전 서사.","language":"ko","market":"JPKR","day":2,"signals":{"social":64000,"fanwork":2200,"search":52,"rank":17}},
+    {"id":"c025","text":"先生と生徒の禁断の恋：年上の先生とスローバーン、偽りの兄妹(义理)ロマンス。","language":"ja","market":"JPKR","day":6,"signals":{"social":36000,"fanwork":1900,"search":34,"rank":35}},
+    {"id":"c026","text":"白切り黒(白切黑)キャラ：優しく見えて実は腹黒、黒化する瞬間が人気、二面性のある人設。","language":"ja","market":"JPKR","day":3,"signals":{"social":59000,"fanwork":3600,"search":50,"rank":19}},
+    {"id":"c027","text":"무한류 웹소설: 타로 점술과 능력자가 나오는 무한 루프, 여주인공의 역전과 성장.","language":"ko","market":"JPKR","day":4,"signals":{"social":48000,"fanwork":1700,"search":40,"rank":27}},
+    {"id":"c028","text":"乙女ゲーム新作：騎士系の守護ヒーロー、忠義で主人公を守り育てる、癒し系スローバーン。","language":"ja","market":"JPKR","day":7,"signals":{"social":31000,"fanwork":1400,"search":30,"rank":42}},
+    {"id":"c029","text":"年下狼狗男主：小奶狗/小狼狗养成，女主主导的治愈系恋爱，年下忠犬年上控。","language":"zh","market":"JPKR","day":1,"signals":{"social":67000,"fanwork":2900,"search":54,"rank":16}},
+    {"id":"c030","text":"유령 남자친구: 귀신과의 힐링 로맨스, 초자연 능력, 인간외(人外) 설정으로 치유와 위로.","language":"ko","market":"JPKR","day":8,"signals":{"social":27000,"fanwork":1200,"search":26,"rank":48}}
+  ]
+}

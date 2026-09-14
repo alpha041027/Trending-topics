@@ -1,0 +1,490 @@
+{
+  "meta": {
+    "version": "0.1-seed",
+    "name": "HerPulse 种子金标集（非正式）",
+    "note": "由 HerPulse 开发侧手工标注，仅用于 harness 链路冒烟与回归测试。存在「自证风险」（标注者与词表作者同源），不作为真实抽取质量的最终背书。正式 200 条金标集需领域专家按『维度×语言×热度档』分层抽样、双人独立标注 + kappa 仲裁（对应 P1 事项 rRslmm）。",
+    "dimensions": ["relationship", "personality", "mood", "occupation_age", "appearance", "world", "gameplay"]
+  },
+  "samples": [
+    {
+      "id": "gs_001",
+      "language": "en",
+      "source": "作品简介",
+      "text": "Make a pact with seven demon brothers in the Devildom and romance them through daily text messages.",
+      "gold": {
+        "relationship": [],
+        "personality": ["恶魔系"],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": ["恶魔地狱"],
+        "gameplay": ["聊天短信"]
+      }
+    },
+    {
+      "id": "gs_002",
+      "language": "en",
+      "source": "作品简介",
+      "text": "Gacha-based otome RPG where you collect cards and build an affection system with each love interest to unlock romantic events.",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": [],
+        "gameplay": ["抽卡扭蛋", "好感度系统"]
+      }
+    },
+    {
+      "id": "gs_003",
+      "language": "zh",
+      "source": "角色介绍",
+      "text": "他是你的青梅竹马，傲娇又温柔，暗恋你多年，如今成了你的契约恋人。",
+      "gold": {
+        "relationship": ["竹马", "契约恋爱", "单向暗恋"],
+        "personality": ["傲娇", "温柔"],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_004",
+      "language": "en",
+      "source": "社媒帖",
+      "text": "This slow-burn CEO romance with a kuudere boss who secretly melts for you is EVERYTHING. Fake dating + enemies to lovers.",
+      "gold": {
+        "relationship": ["契约恋爱", "相爱相杀"],
+        "personality": ["高冷"],
+        "mood": ["慢热"],
+        "occupation_age": ["总裁"],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_005",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "病娇王爷 × 穿越王妃，先婚后爱，追妻火葬场，虐恋情深。",
+      "gold": {
+        "relationship": ["先婚后爱", "追妻火葬场"],
+        "personality": ["病娇"],
+        "mood": ["虐恋"],
+        "occupation_age": [],
+        "appearance": [],
+        "world": ["穿越"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_006",
+      "language": "en",
+      "source": "作品简介",
+      "text": "A vampire otome where you are trapped in a mansion with possessive yandere brothers. Dark, angsty romance.",
+      "gold": {
+        "relationship": ["囚禁"],
+        "personality": ["病娇"],
+        "mood": ["虐恋"],
+        "occupation_age": [],
+        "appearance": [],
+        "world": ["吸血鬼"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_007",
+      "language": "ja",
+      "source": "作品简介",
+      "text": "獣耳の年下彼氏とスローバーンで癒される恋愛シミュレーション。",
+      "gold": {
+        "relationship": ["年下"],
+        "personality": [],
+        "mood": ["慢热", "治愈"],
+        "occupation_age": [],
+        "appearance": ["兽耳兽人"],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_008",
+      "language": "ko",
+      "source": "社媒帖",
+      "text": "재벌 남주인공과 계약연애하는 웹툰, 츤데레인데 갈수록 달달해져서 최고야.",
+      "gold": {
+        "relationship": ["契约恋爱"],
+        "personality": ["傲娇"],
+        "mood": ["甜宠"],
+        "occupation_age": ["总裁"],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_009",
+      "language": "en",
+      "source": "作品简介",
+      "text": "Historical romance set in the Bakumatsu era, starring military officers of the shinsengumi.",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": [],
+        "occupation_age": ["军人"],
+        "appearance": [],
+        "world": ["历史幕末"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_010",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "悬疑推理互动小说，你将扮演侦探，破解谜案，多结局分支，幕后黑手竟是青梅竹马。",
+      "gold": {
+        "relationship": ["竹马"],
+        "personality": [],
+        "mood": [],
+        "occupation_age": ["侦探警察"],
+        "appearance": [],
+        "world": ["悬疑推理"],
+        "gameplay": ["互动小说", "多结局分支", "推理解谜"]
+      }
+    },
+    {
+      "id": "gs_011",
+      "language": "en",
+      "source": "作品简介",
+      "text": "Fantasy otome with elves, dragons and a nine-tailed fox spirit; slow-burn with a knightly love interest.",
+      "gold": {
+        "relationship": [],
+        "personality": ["骑士系"],
+        "mood": ["慢热"],
+        "occupation_age": [],
+        "appearance": [],
+        "world": ["精灵", "龙族", "九尾狐"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_012",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "都市职场文，女主是社畜普女，男主是总裁上司，办公室地下恋，甜宠打脸绿茶。",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": ["社畜", "普女", "甜宠", "爽文打脸"],
+        "occupation_age": ["总裁"],
+        "appearance": [],
+        "world": ["都市", "职场"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_013",
+      "language": "en",
+      "source": "作品简介",
+      "text": "An otome visual novel with branching storylines and multiple endings. Romance a kuudere prince, a knight and a priest.",
+      "gold": {
+        "relationship": [],
+        "personality": ["高冷"],
+        "mood": [],
+        "occupation_age": ["王子王室", "神官祭司", "骑士"],
+        "appearance": [],
+        "world": [],
+        "gameplay": ["互动小说", "多结局分支"]
+      }
+    },
+    {
+      "id": "gs_014",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "无限流快穿系统，女主穿越各世界完成任务，男二是天降，逆袭打脸。",
+      "gold": {
+        "relationship": ["天降", "男二逆袭"],
+        "personality": [],
+        "mood": ["逆袭"],
+        "occupation_age": [],
+        "appearance": [],
+        "world": ["无限流", "快穿"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_015",
+      "language": "en",
+      "source": "社媒帖",
+      "text": "The childhood-friend-to-lovers route in this game made me cry. Mutual pining for years, then a reunion arc.",
+      "gold": {
+        "relationship": ["竹马", "双向暗恋", "破镜重圆"],
+        "personality": [],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_016",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "西幻魔法学院，异色瞳的天才魔法使，高冷傲娇，与天降少女契约恋爱。",
+      "gold": {
+        "relationship": ["天降", "契约恋爱"],
+        "personality": ["高冷", "傲娇", "天才"],
+        "mood": [],
+        "occupation_age": ["魔法使法师"],
+        "appearance": ["异色瞳"],
+        "world": ["西幻"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_017",
+      "language": "ja",
+      "source": "社媒帖",
+      "text": "ヤンデレな吸血鬼の執事に監禁される乙女ゲーム、重すぎて沼。",
+      "gold": {
+        "relationship": ["囚禁"],
+        "personality": ["病娇"],
+        "mood": [],
+        "occupation_age": ["执事"],
+        "appearance": [],
+        "world": ["吸血鬼"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_018",
+      "language": "ko",
+      "source": "作品简介",
+      "text": "회귀한 여주가 재벌과 계약결혼, 선혼후애에 후회물. 통쾌한 사이다 전개.",
+      "gold": {
+        "relationship": ["先婚后爱", "追妻火葬场"],
+        "personality": [],
+        "mood": ["爽文打脸"],
+        "occupation_age": ["总裁"],
+        "appearance": [],
+        "world": ["重生"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_019",
+      "language": "en",
+      "source": "作品简介",
+      "text": "A steampunk adventure where you are guarded by a bodyguard with a mechanical limb, slow-burn romance.",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": ["慢热"],
+        "occupation_age": ["保镖护卫"],
+        "appearance": ["机械义肢"],
+        "world": ["蒸汽朋克"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_020",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "仙侠师尊文，师徒恋，师尊高冷禁欲，追妻火葬场，前世今生。",
+      "gold": {
+        "relationship": ["师生恋", "追妻火葬场", "前世今生"],
+        "personality": ["高冷"],
+        "mood": [],
+        "occupation_age": ["师尊"],
+        "appearance": [],
+        "world": ["仙侠"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_021",
+      "language": "en",
+      "source": "社媒帖",
+      "text": "The yandere route is unhinged in the best way. He is feral, obsessive, and would literally lock you up.",
+      "gold": {
+        "relationship": ["囚禁"],
+        "personality": ["病娇", "疯批", "偏执"],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_022",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "ABO 题材，alpha 总裁 × omega 医生，先婚后爱。",
+      "gold": {
+        "relationship": ["先婚后爱"],
+        "personality": [],
+        "mood": [],
+        "occupation_age": ["总裁", "医生"],
+        "appearance": [],
+        "world": ["ABO"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_023",
+      "language": "en",
+      "source": "作品简介",
+      "text": "A gacha card-battler otome with a rhythm game. Collect cards and dress up your characters.",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": [],
+        "gameplay": ["抽卡扭蛋", "卡牌对战", "音游", "换装"]
+      }
+    },
+    {
+      "id": "gs_024",
+      "language": "zh",
+      "source": "社媒帖",
+      "text": "傲娇高冷总裁，表面嫌弃实则宠溺，嘴硬心软，甜宠天花板。",
+      "gold": {
+        "relationship": [],
+        "personality": ["傲娇", "高冷"],
+        "mood": ["甜宠"],
+        "occupation_age": ["总裁"],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_025",
+      "language": "en",
+      "source": "作品简介",
+      "text": "Post-apocalyptic romance with a cyborg soldier; survival, angst, and a second-chance reunion.",
+      "gold": {
+        "relationship": ["破镜重圆"],
+        "personality": [],
+        "mood": ["虐恋"],
+        "occupation_age": ["军人"],
+        "appearance": ["机械义肢"],
+        "world": ["末日废土"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_026",
+      "language": "ja",
+      "source": "社媒帖",
+      "text": "年下の忠犬系男子とルームシェアから恋人になる話。",
+      "gold": {
+        "relationship": ["年下", "同居合租"],
+        "personality": ["忠犬"],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_027",
+      "language": "ko",
+      "source": "作品简介",
+      "text": "연하 늑대 남주와 슬로우번, 직장 로맨스.",
+      "gold": {
+        "relationship": ["年下"],
+        "personality": [],
+        "mood": ["慢热"],
+        "occupation_age": ["狼狗"],
+        "appearance": [],
+        "world": ["职场"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_028",
+      "language": "en",
+      "source": "社媒帖",
+      "text": "This second male lead wins ending healed me. The underrated childhood friend finally gets the girl.",
+      "gold": {
+        "relationship": ["男二逆袭", "竹马"],
+        "personality": [],
+        "mood": ["治愈"],
+        "occupation_age": [],
+        "appearance": [],
+        "world": [],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_029",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "娱乐圈明星偶像 × 电竞选手，双向暗恋，慢热甜宠，营业变真情。",
+      "gold": {
+        "relationship": ["双向暗恋"],
+        "personality": [],
+        "mood": ["慢热", "甜宠"],
+        "occupation_age": ["明星偶像", "电竞选手"],
+        "appearance": [],
+        "world": ["娱乐圈"],
+        "gameplay": []
+      }
+    },
+    {
+      "id": "gs_030",
+      "language": "en",
+      "source": "作品简介",
+      "text": "A horror otome where you solve puzzles and escape a haunted mansion; a ghost boyfriend guards you.",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": [],
+        "world": ["恐怖", "幽灵"],
+        "gameplay": ["推理解谜"]
+      }
+    },
+    {
+      "id": "gs_031",
+      "language": "en",
+      "source": "社媒帖",
+      "text": "Dress-up gacha with high ponytail and silver-haired pretty boys, this is peak visual satisfaction.",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": [],
+        "occupation_age": [],
+        "appearance": ["高马尾", "银发"],
+        "world": [],
+        "gameplay": ["换装", "抽卡扭蛋"]
+      }
+    },
+    {
+      "id": "gs_032",
+      "language": "zh",
+      "source": "作品简介",
+      "text": "末日废土 × 机甲，男主是清瘦长发军装男，护你周全，慢热。",
+      "gold": {
+        "relationship": [],
+        "personality": [],
+        "mood": ["慢热"],
+        "occupation_age": [],
+        "appearance": ["清瘦", "长发", "制服"],
+        "world": ["末日废土", "机甲"],
+        "gameplay": []
+      }
+    }
+  ]
+}
