@@ -28,7 +28,7 @@ cd "$ROOT"
 # ---- 输入语料 ----
 CORPUS="${1:-${HERPULSE_CORPUS:-}}"
 if [ -z "$CORPUS" ]; then
-  CORPUS="$(ls -t data/corpus_reddit_*.json 2>/dev/null | head -1 || true)"
+  CORPUS="$(ls -t data/corpus_*.json 2>/dev/null | head -1 || true)"
 fi
 if [ -z "$CORPUS" ] || [ ! -f "$CORPUS" ]; then
   echo "错误：未找到语料文件。用法：bash deploy/run_local.sh <corpus.json>" >&2

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # HerPulse 海外采集（只采集，不跑抽取/聚合/渲染）
-# 在 GitHub Actions 海外 runner 或海外 VPS 上运行。
-# 产物：data/corpus_reddit_<时间戳>.json + data/fanwork_ao3_<时间戳>.json
+# 产物：data/corpus_bluesky_<时间戳>.json + data/fanwork_ao3_<时间戳>.json
 set -uo pipefail
 
 # ---- 定位项目根（含 src/ 的目录），兼容本地(herpulse/deploy/)与容器(/app/) ----
@@ -17,24 +16,15 @@ fi
 cd "$ROOT"
 
 # ---- 配置（环境变量优先）----
-REDDIT_SUBS="${HERPULSE_REDDIT_SUBS:-otomegames,OtomeIsekai,RomanceClub,LoveAndDeepspace,MysticMessenger,TwistedWonderland}"
 AO3_TAGS="${HERPULSE_AO3_TAGS:-Enemies to Lovers,Slow Burn,Yandere,Boss and Employee,Office Romance,Reincarnation}"
 
 STAMP="$(date +%Y%m%d_%H%M%S)"
-TARGET="${1:-all}"   # all | reddit | ao3
+TARGET="${1:-all}"   # all | bluesky | ao3
 
-REDDIT_ID="${HERPULSE_REDDIT_CLIENT_ID:-}"
-REDDIT_SECRET="${HERPULSE_REDDIT_CLIENT_SECRET:-}"
-
-run_reddit() {
-  echo "[reddit] 采集 ..."
-  local extra_args=()
-  if [ -n "$REDDIT_ID" ] && [ -n "$REDDIT_SECRET" ]; then
-    extra_args=(--reddit-client-id "$REDDIT_ID" --reddit-client-secret "$REDDIT_SECRET")
-  fi
-  python src/fetchers.py --source reddit --subreddits "$REDDIT_SUBS" \
-    --time-range month --limit 40 --out "data/corpus_reddit_$STAMP.json" \
-    "${extra_args[@]}"
+run_bluesky() {
+  echo "[bluesky] 采集 ..."
+  python src/fetchers.py --source bluesky --limit 30 \
+    --out "data/corpus_bluesky_$STAMP.json"
 }
 
 run_ao3() {
@@ -46,16 +36,16 @@ run_ao3() {
 echo "===== HerPulse 海外采集 $STAMP (mode=$TARGET) ====="
 
 if [ "$TARGET" = "all" ]; then
-  run_reddit || echo "WARN: Reddit 采集失败（可能是 403/429）"
-  run_ao3   || echo "WARN: AO3 采集失败"
-elif [ "$TARGET" = "reddit" ]; then
-  run_reddit
+  run_bluesky || echo "WARN: Bluesky 采集失败"
+  run_ao3     || echo "WARN: AO3 采集失败"
+elif [ "$TARGET" = "bluesky" ]; then
+  run_bluesky
 elif [ "$TARGET" = "ao3" ]; then
   run_ao3
 else
-  echo "用法: $0 [all|reddit|ao3]" >&2
+  echo "用法: $0 [all|bluesky|ao3]" >&2
   exit 1
 fi
 
 echo "===== 采集完成 ====="
-ls -lh data/corpus_reddit_*.json data/fanwork_ao3_*.json 2>/dev/null || true
+ls -lh data/corpus_*.json data/fanwork_ao3_*.json 2>/dev/null || true

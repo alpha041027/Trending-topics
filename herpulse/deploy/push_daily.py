@@ -14,7 +14,6 @@ os.environ.setdefault("HTTPS_PROXY", "http://127.0.0.1:7897")
 ROOT = Path(__file__).parent.parent
 STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-REDDIT_SUBS = "otomegames,OtomeIsekai,RomanceClub,LoveAndDeepspace,MysticMessenger,TwistedWonderland"
 AO3_TAGS = "Enemies to Lovers,Slow Burn,Yandere,Boss and Employee,Office Romance,Reincarnation"
 
 
@@ -32,19 +31,17 @@ def run(cmd, cwd=None, check=True):
 def main():
     print("===== HerPulse Daily Fetch & Push =====\n")
 
-    # 1. Fetch Reddit（本地有代理，应该成功；失败不阻断 AO3）
-    print("[1/3] Fetching Reddit ...")
-    reddit_ok = run([
+    # 1. Fetch Bluesky（Reddit 已死，Bluesky 公共 API 免费免认证）
+    print("[1/3] Fetching Bluesky ...")
+    bluesky_ok = run([
         sys.executable, "src/fetchers.py",
-        "--source", "reddit",
-        "--subreddits", REDDIT_SUBS,
-        "--time-range", "month",
-        "--limit", "40",
-        "--out", f"data/corpus_reddit_{STAMP}.json",
+        "--source", "bluesky",
+        "--limit", "30",
+        "--out", f"data/corpus_bluesky_{STAMP}.json",
     ], check=False) == 0
 
-    if not reddit_ok:
-        print("[WARN] Reddit fetch failed, continuing with AO3 ...\n")
+    if not bluesky_ok:
+        print("[WARN] Bluesky fetch failed, continuing with AO3 ...\n")
 
     # 2. Fetch AO3
     print("[2/3] Fetching AO3 ...")
@@ -59,7 +56,7 @@ def main():
         print("[WARN] AO3 fetch failed\n")
 
     # 如果没有 corpus，不推送
-    corpus_files = list(ROOT.glob("data/corpus_reddit_*.json"))
+    corpus_files = list(ROOT.glob("data/corpus_*.json"))
     if not corpus_files:
         print("[ERROR] No corpus generated. Nothing to push.")
         input("Press Enter to exit ...")

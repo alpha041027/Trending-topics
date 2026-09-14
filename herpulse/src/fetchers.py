@@ -48,6 +48,12 @@ OTOME_SUBREDDITS = [
     "LoveAndDeepspace", "MysticMessenger", "TwistedWonderland",
 ]
 
+# Bluesky 搜索关键词（覆盖乙女/女性向内容）
+BLUESKY_QUERIES = [
+    "otome", "otome game", "visual novel", "yandere",
+    "reverse harem", "dating sim", "romance game",
+]
+
 
 # ---------------------------------------------------------------- HTTP 工具
 # 显式读取代理环境变量，Windows 上 urllib 自动探测有时不稳定
@@ -162,6 +168,57 @@ def fetch_reddit(subreddits=None, time_range="month", limit=40, now=None,
     return samples
 
 
+# ---------------------------------------------------------------- Bluesky
+def fetch_bluesky(queries=None, limit=30, now=None):
+    """抓 Bluesky 公开搜索帖子，返回统一样本列表（含 signals）。
+
+    Bluesky 公共 API 无需认证：
+      https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts
+    """
+    queries = queries or BLUESKY_QUERIES
+    now = now or datetime.now(timezone.utc)
+    samples = []
+    for q in queries:
+        url = (
+            "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts"
+            f"?q={urllib.parse.quote(q)}&limit={limit}"
+        )
+        data = http_get_json(url)
+        posts = data.get("posts", [])
+        for i, post in enumerate(posts):
+            text = post.get("record", {}).get("text", "")
+            if not text:
+                continue
+            likes = post.get("likeCount", 0) or 0
+            replies = post.get("replyCount", 0) or 0
+            created = post.get("record", {}).get("createdAt", "")
+            day = 0
+            if created:
+                try:
+                    created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                    days_ago = (now - created_dt).days
+                    day = max(0, min(13, days_ago))
+                except ValueError:
+                    pass
+            post_id = post.get("uri", "").split("/")[-1] or str(i)
+            samples.append({
+                "id": f"bluesky_{q.replace(' ', '_')}_{post_id}",
+                "text": text[:2000],
+                "language": "en",
+                "market": "EUUS",
+                "day": day,
+                "source": "bluesky",
+                "query": q,
+                "signals": {
+                    "social": likes + replies * 10,
+                    "fanwork": 0,
+                    "search": 0,
+                    "rank": i + 1,
+                },
+            })
+    return samples
+
+
 # ---------------------------------------------------------------- AO3
 def fetch_ao3_tag_works(tags, now=None):
     """抓 AO3 各 tag 的作品总数（fanwork 二创信号）。返回 [{tag, works}]。
@@ -250,7 +307,7 @@ def self_test():
 
 def main():
     p = argparse.ArgumentParser(description="HerPulse 真实数据源采集器")
-    p.add_argument("--source", choices=["reddit", "ao3"], help="数据源")
+    p.add_argument("--source", choices=["reddit", "ao3", "bluesky"], help="数据源")
     p.add_argument("--subreddits", help="逗号分隔的 subreddit（默认 otomegames 等）")
     p.add_argument("--tags", help="逗号分隔的 AO3 tag")
     p.add_argument("--time-range", default="month", help="Reddit 时间范围（day/week/month/year）")
@@ -274,6 +331,11 @@ def main():
         )
         to_corpus(samples, "reddit", args.out)
         print(f"Reddit 采集完成：{len(samples)} 条帖子 → {args.out}")
+    elif args.source == "bluesky":
+        queries = [q.strip() for q in args.subreddits.split(",")] if args.subreddits else None
+        samples = fetch_bluesky(queries, limit=args.limit)
+        to_corpus(samples, "bluesky", args.out)
+        print(f"Bluesky 采集完成：{len(samples)} 条帖子 → {args.out}")
     elif args.source == "ao3":
         if not args.tags:
             raise SystemExit("AO3 采集需 --tags（逗号分隔的设定点 tag）")
