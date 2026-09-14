@@ -1,7 +1,10 @@
-# HerPulse 海外采集（GitHub Actions 免费海外 runner，只采集不出海后半段）
-# 产物：herpulse/data/corpus_reddit_*.json + fanwork_ao3_*.json（Artifacts 下载回本地）
-# 注意：runner 是数据中心 IP，Reddit 极易 403/429，AO3 通常正常。
-#      Reddit 失败不会阻断 AO3，确保至少有一份数据落盘。
+# HerPulse 全自动链路（采集 → 抽取 → 聚合 → 渲染 → GitHub Pages）
+# 用法：在 Actions 页点击 "Run workflow"，等 3-5 分钟后访问
+# https://alpha041027.github.io/Trending-topics/
+#
+# 前置设置：
+#   1. Settings → Secrets → Actions → 新建 HERPULSE_LLM_API_KEY（DeepSeek key）
+#   2. Settings → Pages → Source 选 "GitHub Actions"
 
 name: HerPulse Overseas Fetch
 
@@ -9,6 +12,15 @@ on:
   schedule:
     - cron: '0 1 * * *'   # 每天 UTC 01:00（北京时间 09:00）
   workflow_dispatch: {}   # 支持手动触发
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   fetch:
@@ -29,7 +41,7 @@ jobs:
       - name: Fetch AO3
         run: bash herpulse/deploy/fetch_only.sh ao3
 
-      - name: Upload corpus
+      - name: Upload raw corpus
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -38,3 +50,31 @@ jobs:
             herpulse/data/corpus_reddit_*.json
             herpulse/data/fanwork_ao3_*.json
           retention-days: 30
+
+      - name: Build dashboard
+        env:
+          HERPULSE_LLM_API_KEY: ${{ secrets.HERPULSE_LLM_API_KEY }}
+        run: |
+          cd herpulse
+          bash deploy/run_local.sh
+
+      - name: Prepare Pages
+        run: |
+          mkdir -p _site
+          cp herpulse-dashboard-live.html _site/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: fetch
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
