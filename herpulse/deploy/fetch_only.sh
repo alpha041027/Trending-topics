@@ -23,10 +23,18 @@ AO3_TAGS="${HERPULSE_AO3_TAGS:-Enemies to Lovers,Slow Burn,Yandere,Boss and Empl
 STAMP="$(date +%Y%m%d_%H%M%S)"
 TARGET="${1:-all}"   # all | reddit | ao3
 
+REDDIT_ID="${HERPULSE_REDDIT_CLIENT_ID:-}"
+REDDIT_SECRET="${HERPULSE_REDDIT_CLIENT_SECRET:-}"
+
 run_reddit() {
   echo "[reddit] 采集 ..."
+  local extra_args=()
+  if [ -n "$REDDIT_ID" ] && [ -n "$REDDIT_SECRET" ]; then
+    extra_args=(--reddit-client-id "$REDDIT_ID" --reddit-client-secret "$REDDIT_SECRET")
+  fi
   python src/fetchers.py --source reddit --subreddits "$REDDIT_SUBS" \
-    --time-range month --limit 40 --out "data/corpus_reddit_$STAMP.json"
+    --time-range month --limit 40 --out "data/corpus_reddit_$STAMP.json" \
+    "${extra_args[@]}"
 }
 
 run_ao3() {

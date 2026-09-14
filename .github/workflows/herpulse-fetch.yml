@@ -1,17 +1,25 @@
-# HerPulse 全自动链路（采集 → 抽取 → 聚合 → 渲染 → GitHub Pages）
-# 用法：在 Actions 页点击 "Run workflow"，等 3-5 分钟后访问
-# https://alpha041027.github.io/Trending-topics/
+# HerPulse 方法A：本地采集 Reddit → push → GitHub Actions 自动跑 AO3 + 后半段 + Pages
+# 触发条件：
+#   1. 推送 herpulse/data/ 目录变更到 main 分支（你本地采集后 push 上来）
+#   2. 手动点击 Run workflow
+#
+# 你需要在本地做的（每天一次）：
+#   cd e:/HerPulse/herpulse
+#   bash deploy/fetch_only.sh
+#   git add data/ && git commit -m "data: $(date +%Y%m%d)" && git push
 #
 # 前置设置：
-#   1. Settings → Secrets → Actions → 新建 HERPULSE_LLM_API_KEY（DeepSeek key）
-#   2. Settings → Pages → Source 选 "GitHub Actions"
+#   Settings → Secrets → Actions → 新建 HERPULSE_LLM_API_KEY（DeepSeek key）
+#   Settings → Pages → Source 选 "GitHub Actions"
 
-name: HerPulse Overseas Fetch
+name: HerPulse Build Dashboard
 
 on:
-  schedule:
-    - cron: '0 1 * * *'   # 每天 UTC 01:00（北京时间 09:00）
-  workflow_dispatch: {}   # 支持手动触发
+  push:
+    branches: [main]
+    paths:
+      - 'herpulse/data/**'
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -23,7 +31,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  fetch:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,12 +42,9 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Fetch Reddit
-        run: bash herpulse/deploy/fetch_only.sh reddit
-        continue-on-error: true
-
       - name: Fetch AO3
         run: bash herpulse/deploy/fetch_only.sh ao3
+        continue-on-error: true
 
       - name: Upload raw corpus
         uses: actions/upload-artifact@v4
@@ -83,14 +88,10 @@ jobs:
             <h1>HerPulse 看板构建失败</h1>
             <p>可能的原因：</p>
             <ul>
-              <li>Reddit 采集被拦截（403），没有语料文件</li>
+              <li>未找到 Reddit 语料文件（请先本地采集并 push）</li>
               <li>DeepSeek API key 未配置或额度不足</li>
             </ul>
-            <p>请检查 <a href="https://github.com/alpha041027/Trending-topics/actions">Actions 日志</a>，确认以下两项：</p>
-            <ol>
-              <li>Settings → Secrets → <code>HERPULSE_LLM_API_KEY</code> 已设置</li>
-              <li>重新点击 <strong>Run workflow</strong> 尝试（Reddit 限流具有随机性）</li>
-            </ol>
+            <p>请检查 <a href="https://github.com/alpha041027/Trending-topics/actions">Actions 日志</a>。</p>
           </body>
           </html>
           EOF
@@ -106,7 +107,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: fetch
+    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

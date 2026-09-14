@@ -30,6 +30,7 @@ HerPulse 真实数据源采集器（M5 数据接入）
 """
 
 import argparse
+import base64
 import json
 import re
 import sys
@@ -75,7 +76,30 @@ def day_from_timestamp(ts, now):
     return max(0, min(13, days_ago))
 
 
-# ---------------------------------------------------------------- Reddit
+# ---------------------------------------------------------------- Reddit OAuth
+_REDDIT_OAUTH_UA = "HerPulse-research/0.1 (by /u/HerPulseBot)"
+
+
+def get_reddit_token(client_id, client_secret):
+    """用 client_credentials 换取 Reddit OAuth access_token。"""
+    if not client_id or not client_secret:
+        return None
+    creds = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    req = urllib.request.Request(
+        "https://www.reddit.com/api/v1/access_token",
+        data=b"grant_type=client_credentials",
+        headers={
+            "Authorization": f"Basic {creds}",
+            "User-Agent": _REDDIT_OAUTH_UA,
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=25) as r:
+        resp = json.loads(r.read().decode("utf-8"))
+    return resp.get("access_token")
+
+
 # 模拟浏览器头，降低被 Cloudflare / Reddit WAF 拦截的概率
 _REDDIT_HEADERS = {
     "Accept": "application/json, text/plain, */*",
@@ -85,14 +109,25 @@ _REDDIT_HEADERS = {
 }
 
 
-def fetch_reddit(subreddits=None, time_range="month", limit=40, now=None):
+def fetch_reddit(subreddits=None, time_range="month", limit=40, now=None,
+                 client_id=None, client_secret=None):
     """抓 subreddit top 帖子，返回统一样本列表（含 signals）。"""
     subreddits = subreddits or OTOME_SUBREDDITS
     now = now or datetime.now(timezone.utc)
     samples = []
+
+    # 优先使用 OAuth；未提供则回退到匿名请求
+    token = get_reddit_token(client_id, client_secret)
+    headers = _REDDIT_HEADERS.copy()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+        base_url = "https://oauth.reddit.com"
+    else:
+        base_url = "https://www.reddit.com"
+
     for sub in subreddits:
-        url = f"https://www.reddit.com/r/{sub}/top.json?t={time_range}&limit={limit}"
-        data = http_get_json(url, headers=_REDDIT_HEADERS.copy())
+        url = f"{base_url}/r/{sub}/top.json?t={time_range}&limit={limit}"
+        data = http_get_json(url, headers=headers)
         children = data.get("data", {}).get("children", [])
         for i, ch in enumerate(children):
             d = ch.get("data", {})
@@ -216,6 +251,8 @@ def main():
     p.add_argument("--time-range", default="month", help="Reddit 时间范围（day/week/month/year）")
     p.add_argument("--limit", type=int, default=40)
     p.add_argument("--out", default="data/corpus_fetched.json")
+    p.add_argument("--reddit-client-id", help="Reddit App client_id（OAuth）")
+    p.add_argument("--reddit-client-secret", help="Reddit App client_secret（OAuth）")
     p.add_argument("--self-test", action="store_true", help="本地自检（不联网）")
     args = p.parse_args()
 
@@ -225,7 +262,11 @@ def main():
 
     if args.source == "reddit":
         subs = [s.strip() for s in args.subreddits.split(",")] if args.subreddits else None
-        samples = fetch_reddit(subs, time_range=args.time_range, limit=args.limit)
+        samples = fetch_reddit(
+            subs, time_range=args.time_range, limit=args.limit,
+            client_id=args.reddit_client_id,
+            client_secret=args.reddit_client_secret,
+        )
         to_corpus(samples, "reddit", args.out)
         print(f"Reddit 采集完成：{len(samples)} 条帖子 → {args.out}")
     elif args.source == "ao3":
