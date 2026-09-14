@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 """HerPulse 本地采集 + 自动推送到仓库（触发 GitHub Actions 后半段）"""
 
+import os
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+# 自动走本地代理（Clash/V2Ray），不影响已设置的环境变量
+os.environ.setdefault("HTTP_PROXY", "http://127.0.0.1:7897")
+os.environ.setdefault("HTTPS_PROXY", "http://127.0.0.1:7897")
 
 ROOT = Path(__file__).parent.parent
 STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
