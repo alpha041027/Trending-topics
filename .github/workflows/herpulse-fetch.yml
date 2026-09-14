@@ -52,16 +52,49 @@ jobs:
           retention-days: 30
 
       - name: Build dashboard
+        id: build
         env:
           HERPULSE_LLM_API_KEY: ${{ secrets.HERPULSE_LLM_API_KEY }}
         run: |
           cd herpulse
           bash deploy/run_local.sh
+        continue-on-error: true
 
       - name: Prepare Pages
+        if: always()
         run: |
           mkdir -p _site
-          cp herpulse-dashboard-live.html _site/index.html
+          if [ -f herpulse-dashboard-live.html ]; then
+            cp herpulse-dashboard-live.html _site/index.html
+          else
+            cat > _site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+            <meta charset="utf-8">
+            <title>HerPulse — 构建失败</title>
+            <style>
+              body { font-family: system-ui, sans-serif; max-width: 600px; margin: 80px auto; padding: 0 20px; color: #333; }
+              h1 { color: #c0392b; }
+              code { background: #f4f4f4; padding: 2px 6px; border-radius: 4px; }
+            </style>
+          </head>
+          <body>
+            <h1>HerPulse 看板构建失败</h1>
+            <p>可能的原因：</p>
+            <ul>
+              <li>Reddit 采集被拦截（403），没有语料文件</li>
+              <li>DeepSeek API key 未配置或额度不足</li>
+            </ul>
+            <p>请检查 <a href="https://github.com/alpha041027/Trending-topics/actions">Actions 日志</a>，确认以下两项：</p>
+            <ol>
+              <li>Settings → Secrets → <code>HERPULSE_LLM_API_KEY</code> 已设置</li>
+              <li>重新点击 <strong>Run workflow</strong> 尝试（Reddit 限流具有随机性）</li>
+            </ol>
+          </body>
+          </html>
+          EOF
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
