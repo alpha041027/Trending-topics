@@ -126,6 +126,20 @@
   .srctag.fake{background:#fdf1e6;color:#b06018}
   .srctag.miss{background:#f1eef3;color:#8a8390}
 
+  /* ---- 趋势发现 ---- */
+  .discover-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:20px;background:#e7f5ef;color:#157a56;font-weight:600}
+  .discover-badge.vocab{background:var(--violet-soft);color:var(--violet)}
+  .trend-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg);border-radius:12px;margin-bottom:10px}
+  .trend-rank{width:24px;height:24px;border-radius:8px;background:var(--teal);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none}
+  .trend-main{flex:1;min-width:0}
+  .trend-q{font-size:14px;font-weight:600;margin-bottom:3px;word-break:break-word}
+  .trend-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-bottom:3px}
+  .trend-traffic{color:var(--teal);font-weight:600}
+  .trend-rel{font-size:11.5px;color:var(--faint);word-break:break-word}
+  .trend-vocab{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;background:var(--violet-soft);border-radius:10px;margin-bottom:8px}
+  .trend-vocab .tag{font-size:13px;font-weight:600;color:var(--violet)}
+  .trend-vocab .q{font-size:12px;color:var(--muted)}
+
 </style>
 </head>
 <body>
@@ -163,6 +177,14 @@
     </header>
     <div class="dimchart" id="dimChart"></div>
     <div class="marketrow" id="marketRow"></div>
+  </section>
+
+  <section class="card" id="sec-discover">
+    <header>
+      <h2>趋势发现 · 真实 API 筛选</h2>
+      <span class="sub" id="discoverSub">—</span>
+    </header>
+    <div id="discoverBody"></div>
   </section>
 
   <div class="layout">
@@ -212,6 +234,10 @@ function fmtNum(n){
   if(n>=1000000) return (n/1000000).toFixed(1)+'M';
   if(n>=1000) return (n/1000).toFixed(1)+'K';
   return ''+n;
+}
+
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 function filteredTropes(){
@@ -269,6 +295,56 @@ function renderMarketRow(){
     const pct = Math.round(v/total*100);
     return `<div class="marketcell"><div class="mv">${v}</div><div class="mk">${k} · ${pct}%</div></div>`;
   }).join('');
+}
+
+function renderDiscover(){
+  const d = DATA.discover || {};
+  const nt = d.new_trends || [];
+  const vt = d.vocab_trending || [];
+  $('#discoverSub').textContent = d.source || 'Google Trends 每日趋势';
+  let html = '';
+
+  // 新趋势词（核心：词表外、真实 API 筛选出的女性向上升趋势）
+  html += `<div style="margin-bottom:16px">
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">
+      <span class="discover-badge">新发现</span> 女性向相关上升趋势词（词表外 · Google 计算 · 非预设）
+    </div>`;
+  if(!nt.length){
+    html += `<div style="color:var(--faint);font-size:12.5px">今日未发现词表外的女性向趋势词。</div>`;
+  } else {
+    html += nt.slice(0,12).map((t,i)=>{
+      const rel = (t.related_queries||[]).slice(0,3).map(esc).join(' · ');
+      return `<div class="trend-item">
+        <span class="trend-rank">${i+1}</span>
+        <div class="trend-main">
+          <div class="trend-q">${esc(t.query)}</div>
+          <div class="trend-meta">
+            <span class="trend-traffic">${esc(t.traffic||'—')}</span>
+            <span>${esc(t.geo||'')}</span>
+          </div>
+          ${rel?`<div class="trend-rel">相关：${rel}</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+  html += `</div>`;
+
+  // 词表内词今日上榜
+  html += `<div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">
+      <span class="discover-badge vocab">词表词上榜</span> 词表内设定点今日出现在趋势榜（佐证热度）
+    </div>`;
+  if(!vt.length){
+    html += `<div style="color:var(--faint);font-size:12.5px">今日无词表内设定点进入趋势榜。</div>`;
+  } else {
+    html += vt.slice(0,8).map(v=>{
+      const items = (v.items||[]).slice(0,3).map(it=>`${esc(it.query)}(${esc(it.traffic||'')})`).join('、');
+      return `<div class="trend-vocab"><span class="tag">${esc(v.tag)}</span><span class="q">${items}</span></div>`;
+    }).join('');
+  }
+  html += `</div>`;
+
+  $('#discoverBody').innerHTML = html;
 }
 
 function renderSignalBox(t){
@@ -404,7 +480,7 @@ function bindCtrls(){
 }
 
 function init(){
-  renderSignalSource(); renderKPI(); renderDimChart(); renderMarketRow();
+  renderSignalSource(); renderKPI(); renderDimChart(); renderMarketRow(); renderDiscover();
   renderTropes(); renderRecipes(); renderNewWords(); renderSignals(); renderInsight(); renderFoot(); bindCtrls();
 }
 init();

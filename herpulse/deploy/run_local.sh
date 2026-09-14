@@ -80,8 +80,14 @@ if [ -n "$SEARCH" ]; then
   echo "  检测到 Google Trends search 信号：$SEARCH"
   SEARCH_ARG="--search $SEARCH"
 fi
+TRENDS_DAILY="$(ls -t data/discover_daily_*.json 2>/dev/null | head -1 || true)"
+TRENDS_DAILY_ARG=""
+if [ -n "$TRENDS_DAILY" ]; then
+  echo "  检测到 Google Trends 每日趋势：$TRENDS_DAILY"
+  TRENDS_DAILY_ARG="--trends-daily $TRENDS_DAILY"
+fi
 python src/aggregate.py --corpus "$CORPUS" --detail "$DETAIL" \
-  --vocab data/seed_vocabulary.json $FANWORK_ARG $SEARCH_ARG --out "$DASH"
+  --vocab data/seed_vocabulary.json $FANWORK_ARG $SEARCH_ARG $TRENDS_DAILY_ARG --out "$DASH"
 
 echo "[3/3] 渲染看板 ..."
 OUT_HTML="${HERPULSE_OUT_HTML:-$ROOT/../herpulse-dashboard-live.html}"

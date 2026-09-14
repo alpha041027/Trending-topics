@@ -386,6 +386,55 @@ def fetch_trends_interest(keywords, timeframe="today 3-m", now=None, pause=1.5):
     return result
 
 
+# ---------------------------------------------------------------- Google Trends 每日趋势（真·热点发现）
+def fetch_trends_daily(geos=None, ns=15, now=None, pause=2.0):
+    """调 Google Trends dailytrends 接口，拉每日上升趋势词（真实 API 筛选，非预设词表）。
+
+    dailytrends 返回「过去 24 小时搜索量跳涨」的查询词（含绝对搜索量级 formattedTraffic），
+    由 Google 计算得出，不依赖我们预设的关键词 —— 这正是「热点发现」所需的信号。
+    返回 [{query, traffic, related_queries, articles, geo, date}, ...]。
+
+    geo 支持 US/JP/KR 等国家码，可一次拉多个地区。ns 为每地区返回条数（默认 15）。
+    """
+    geos = geos or ["US", "JP", "KR"]
+    now = now or datetime.now(timezone.utc)
+    date_str = now.strftime("%Y%m%d")
+    opener = _trends_opener()
+    # 预热会话 cookie（首次 explore 需先建立 NID cookie）
+    try:
+        opener.open("https://trends.google.com/trends/explore", timeout=20).read()
+    except Exception:  # noqa: BLE001
+        pass
+    results = []
+    for geo in geos:
+        url = (
+            f"https://trends.google.com/trends/api/dailytrends"
+            f"?hl=en-US&tz=0&ed={date_str}&geo={geo}&ns={ns}"
+        )
+        try:
+            data = _trends_request(opener, url)
+            days = data.get("default", {}).get("trendingSearchesDays", [])
+            if not days:
+                results.append({"geo": geo, "date": date_str, "error": "empty trendingSearchesDays"})
+                continue
+            for t in days[0].get("trendingSearches", []):
+                title = (t.get("title") or {}).get("query", "")
+                if not title:
+                    continue
+                results.append({
+                    "query": title,
+                    "traffic": t.get("formattedTraffic", ""),
+                    "related_queries": [r.get("query", "") for r in t.get("relatedQueries", [])],
+                    "articles": [a.get("title", "") for a in t.get("articles", [])],
+                    "geo": geo,
+                    "date": date_str,
+                })
+        except Exception as e:  # noqa: BLE001
+            results.append({"geo": geo, "date": date_str, "error": str(e)[:120]})
+        time.sleep(pause)
+    return results
+
+
 # ---------------------------------------------------------------- 汇总输出
 def to_corpus(samples, source, out_path):
     """把样本汇总成 corpus 格式（对齐 corpus_sample.json，可直接喂 extract.py）。"""
@@ -461,6 +510,22 @@ def self_test():
     print(f"  interest/momentum 解析：interest={interest}, momentum={momentum:.1f}%")
     print("  （14点序列，近7天=[35,40,45,50,55,60,65] 前7天=[10,12,14,20,18,22,30]）")
 
+    # dailytrends 结构解析验证（mock，不联网）
+    fake_daily = (
+        ")]}'\n, {\"default\":{\"trendingSearchesDays\":[{\"date\":\"20260914\","
+        "\"trendingSearches\":[{\"title\":{\"query\":\"otome game new release\"},"
+        "\"formattedTraffic\":\"200K+\",\"relatedQueries\":[{\"query\":\"otome game 2026\"}],"
+        "\"articles\":[{\"title\":\"New otome game tops charts\"}]}]}]}}"
+    )
+    d_stripped = _strip_trends_prefix(fake_daily)
+    d_ok = d_stripped.startswith("{")
+    dd = json.loads(d_stripped)
+    day = dd["default"]["trendingSearchesDays"][0]
+    first = day["trendingSearches"][0]
+    print(f"\n  dailytrends 前缀剥离：{d_ok}（期望 True）{'✓' if d_ok else '✗'}")
+    print(f"  dailytrends 解析：query={first['title']['query']!r} traffic={first['formattedTraffic']!r} "
+          f"related={len(first['relatedQueries'])} articles={len(first['articles'])}")
+
     print("\n自检通过。真实抓取需在能访问 Reddit/AO3/Google Trends 的网络环境运行：")
     print("  python src/fetchers.py --source reddit --out data/corpus_reddit.json")
     print("  python src/fetchers.py --source trends --tags-from-vocab data/seed_vocabulary.json --out data/search_google.json")
@@ -468,13 +533,15 @@ def self_test():
 
 def main():
     p = argparse.ArgumentParser(description="HerPulse 真实数据源采集器")
-    p.add_argument("--source", choices=["reddit", "ao3", "bluesky", "trends"], help="数据源")
+    p.add_argument("--source", choices=["reddit", "ao3", "bluesky", "trends", "trendsdaily"], help="数据源")
     p.add_argument("--subreddits", help="逗号分隔的 subreddit（默认 otomegames 等）")
     p.add_argument("--tags", help="逗号分隔的 tag / 搜索关键词（AO3 tag 或 Google Trends 关键词）")
     p.add_argument("--tags-from-vocab", help="从词表生成（high_signal 设定点的英文别名）")
     p.add_argument("--ao3-limit", type=int, default=0, help="AO3 tag 数量上限（0=不限）")
     p.add_argument("--trends-timeframe", default="today 3-m", help="Google Trends 时间范围（today 1-m/3-m/12-m）")
     p.add_argument("--trends-pause", type=float, default=1.5, help="Google Trends 请求间隔秒数（限流控制）")
+    p.add_argument("--geos", help="逗号分隔的国家码（dailytrends 用，默认 US,JP,KR）")
+    p.add_argument("--trends-ns", type=int, default=15, help="每地区 dailytrends 返回条数（默认 15）")
     p.add_argument("--time-range", default="month", help="Reddit 时间范围（day/week/month/year）")
     p.add_argument("--limit", type=int, default=40)
     p.add_argument("--out", default="data/corpus_fetched.json")
@@ -533,6 +600,19 @@ def main():
         for r in result:
             flag = "✗" if r.get("error") else "✓"
             print(f"  {flag} {r['tag']:<28} interest={r['interest']:<6} momentum={r['momentum']:+.1f}%")
+    elif args.source == "trendsdaily":
+        geos = [g.strip().upper() for g in args.geos.split(",")] if args.geos else None
+        result = fetch_trends_daily(geos, ns=args.trends_ns)
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        with open(args.out, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        ok = sum(1 for r in result if r.get("query"))
+        print(f"Google Trends 每日趋势采集完成：{len(result)} 条（{ok} 条有效）→ {args.out}")
+        for r in result:
+            if r.get("query"):
+                print(f"  [{r['geo']}] {r['traffic']:<8} {r['query']}")
+            else:
+                print(f"  [{r.get('geo', '?')}] ✗ {r.get('error', '')}")
     else:
         p.print_help()
 

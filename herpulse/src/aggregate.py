@@ -22,6 +22,7 @@ HerPulse 热度聚合器（M3/M4 端到端串联核心）
 import argparse
 import json
 import math
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -42,6 +43,89 @@ DIM_NAMES = {
     "world": "世界观·场景",
     "gameplay": "交互·玩法",
 }
+
+# 女性向语境词（用于判断 dailytrends 趋势词是否与「女性向互动内容」相关）。
+# ⚠️ 注意：这不是「预设热点词」，它只回答「这个趋势词跟女性向有没有关系」，
+#    不决定哪些词上榜——上榜的是 Google 算出来的真实上升趋势词。
+FEMALE_CONTEXT_HINTS = [
+    # 英文
+    "otome", "visual novel", "dating sim", "dating game", "romance game",
+    "romance", "boyfriend", "husbando", "anime", "gacha", "isekai",
+    "reincarnation", "manhwa", "webtoon", "voice actor", "reverse harem",
+    "shoujo", "shojo", "josei", "interactive",
+    # 日文
+    "乙女", "恋愛", "ゲーム", "アニメ", "声優", "イケメン", "逆ハー",
+    "異世界", "転生", "少女漫画", "女性向", "彼氏", "推し",
+    # 韩文
+    "로맨스", "연애", "게임", "애니", "남자친구", "여성향", "이세계", "만화", "웹툰", "성우",
+]
+
+
+def _parse_traffic(traffic):
+    """把 formattedTraffic（如 '200K+'、'1M+'、'50K+'）解析成数值下限。"""
+    t = str(traffic or "").strip().upper().replace(",", "")
+    m = re.match(r"([\d.]+)\s*([KM]?)\+?", t)
+    if not m:
+        return 0
+    num = float(m.group(1))
+    suffix = m.group(2)
+    if suffix == "K":
+        num *= 1000
+    elif suffix == "M":
+        num *= 1000000
+    return int(num)
+
+
+def _is_female_oriented(query, related, articles, hints):
+    """判断趋势词是否与女性向互动内容相关（命中任一语境词即相关）。"""
+    text = " ".join([query] + list(related) + list(articles)).lower()
+    return any(h.lower() in text for h in hints)
+
+
+def load_trends_daily(path, dim_info, hints):
+    """读 dailytrends 结果，做相关性分类。
+
+    返回 (matched_map, discovered)：
+    - matched_map: {词表tag: [{query, traffic, geo, traffic_num}]} —— 趋势词命中词表别名
+    - discovered:  [{query, traffic, traffic_num, geo, related_queries, articles}] —— 女性向新趋势词
+    """
+    if not path:
+        return {}, []
+    p = Path(path)
+    if not p.exists():
+        print(f"  [trends-daily] 未找到 {path}，跳过趋势发现")
+        return {}, []
+    data = load_json(path)
+    matched_map = defaultdict(list)
+    discovered = []
+    matched_n = 0
+    for item in data:
+        if not item.get("query"):
+            continue
+        q = item["query"]
+        q_low = q.strip().lower()
+        trope = dim_info.get(q_low)
+        if trope:
+            matched_map[trope].append({
+                "query": q, "traffic": item.get("traffic", ""),
+                "geo": item.get("geo", ""),
+                "traffic_num": _parse_traffic(item.get("traffic", "")),
+            })
+            matched_n += 1
+            continue
+        related = item.get("related_queries", []) or []
+        articles = item.get("articles", []) or []
+        if _is_female_oriented(q, related, articles, hints):
+            discovered.append({
+                "query": q,
+                "traffic": item.get("traffic", ""),
+                "traffic_num": _parse_traffic(item.get("traffic", "")),
+                "geo": item.get("geo", ""),
+                "related_queries": related[:5],
+                "articles": articles[:3],
+            })
+    print(f"  [trends-daily] 读取 {len(data)} 条趋势词，命中词表 {matched_n} 个，女性向新趋势 {len(discovered)} 个")
+    return dict(matched_map), discovered
 
 
 def build_global_stats(samples, point_values=None):
@@ -186,6 +270,7 @@ def main():
     p.add_argument("--out", default="data/dashboard_data.json")
     p.add_argument("--fanwork", default="", help="AO3 fanwork 文件（fanwork_ao3_*.json），注入真实二创产量信号")
     p.add_argument("--search", default="", help="Google Trends search 文件（search_google_*.json），注入真实搜索热度信号")
+    p.add_argument("--trends-daily", default="", help="Google Trends 每日趋势文件（discover_daily_*.json），做新词发现")
     p.add_argument("--top", type=int, default=18, help="题材榜输出条数")
     args = p.parse_args()
 
@@ -227,6 +312,9 @@ def main():
     # 读 AO3 fanwork + Google Trends search 真值（可选）
     fanwork_map = load_fanwork_map(args.fanwork, dim_info)
     search_map = load_search_map(args.search, dim_info)
+
+    # 读 Google Trends 每日趋势（真·热点发现，可选）
+    matched_trends, discovered = load_trends_daily(args.trends_daily, dim_info, FEMALE_CONTEXT_HINTS)
 
     # 聚合样本信号（social/search/rank + 样本内的 fanwork）
     acc = aggregate_signals(samples)
@@ -358,6 +446,19 @@ def main():
                   "source": "采集内名次" if is_real_fetch else "模拟值"},
     }
 
+    # 趋势发现：词表内词实时上榜 + 女性向新趋势词（来自 dailytrends 真实 API 筛选）
+    vocab_trending = sorted(
+        [{"tag": tag, "items": sorted(items, key=lambda x: -x["traffic_num"])}
+         for tag, items in matched_trends.items()],
+        key=lambda x: -max((i["traffic_num"] for i in x["items"]), default=0),
+    )
+    discovered_sorted = sorted(discovered, key=lambda x: -x["traffic_num"])
+    discover = {
+        "source": "Google Trends 每日趋势（dailytrends，真实 API 筛选，非预设词表）",
+        "vocab_trending": vocab_trending,
+        "new_trends": discovered_sorted,
+    }
+
     out = {
         "meta": {
             "generated": "2026-09-14",
@@ -383,6 +484,7 @@ def main():
         "signal_layer": signal_layer,
         "dim_dist": dim_dist_list,
         "market_dist": market_dist,
+        "discover": discover,
         "dims": {k: {"name": v} for k, v in DIM_NAMES.items()},
     }
 
@@ -393,6 +495,10 @@ def main():
     print(f"聚合完成：{len(samples)} 条语料 → {len(tropes)} 个设定点 → {args.out}")
     print(f"  热点阈值 {hot_th:.3f}，热点设定点 {len(hot_tags)} 个，突增(Δ≥50%) {len(surge_tags)} 个")
     print(f"  组合配方 {len(recipes)} 个，新词提案 {len(new_words_list)} 个")
+    if discovered:
+        print(f"  [趋势发现] 女性向新趋势 {len(discovered)} 个，词表词实时上榜 {len(matched_trends)} 个")
+        for d in discovered_sorted[:5]:
+            print(f"    ↑ {d['traffic']:<8} [{d['geo']}] {d['query']}")
     print(f"\n  Top 8 设定点：")
     for t in tropes[:8]:
         print(f"    {t['heat']:+.3f}  Δ{t['delta']:+.1f}%  [{t['dim_name']}] {t['tag']}  (跨作品 {t['works']})")

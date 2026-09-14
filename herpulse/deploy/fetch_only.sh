@@ -49,20 +49,31 @@ run_trends() {
     --out "data/search_google_$STAMP.json"
 }
 
+run_trendsdaily() {
+  echo "[trendsdaily] 采集 Google Trends 每日趋势（真实 API 筛选热点，非预设词）..."
+  python src/fetchers.py --source trendsdaily \
+    --geos "${HERPULSE_TRENDS_GEOS:-US,JP,KR}" \
+    --trends-ns "${HERPULSE_TRENDS_NS:-15}" \
+    --out "data/discover_daily_$STAMP.json"
+}
+
 echo "===== HerPulse 海外采集 $STAMP (mode=$TARGET) ====="
 
 if [ "$TARGET" = "all" ]; then
-  run_bluesky || echo "WARN: Bluesky 采集失败"
-  run_ao3     || echo "WARN: AO3 采集失败"
-  run_trends  || echo "WARN: Google Trends 采集失败"
+  run_bluesky      || echo "WARN: Bluesky 采集失败"
+  run_ao3          || echo "WARN: AO3 采集失败"
+  run_trends       || echo "WARN: Google Trends 采集失败"
+  run_trendsdaily  || echo "WARN: Google Trends 每日趋势采集失败"
 elif [ "$TARGET" = "bluesky" ]; then
   run_bluesky
 elif [ "$TARGET" = "ao3" ]; then
   run_ao3
 elif [ "$TARGET" = "trends" ]; then
   run_trends
+elif [ "$TARGET" = "trendsdaily" ]; then
+  run_trendsdaily
 else
-  echo "用法: $0 [all|bluesky|ao3|trends]" >&2
+  echo "用法: $0 [all|bluesky|ao3|trends|trendsdaily]" >&2
   exit 1
 fi
 

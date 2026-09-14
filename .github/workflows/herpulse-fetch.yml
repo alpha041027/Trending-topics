@@ -46,6 +46,10 @@ jobs:
         run: bash herpulse/deploy/fetch_only.sh trends
         continue-on-error: true
 
+      - name: Fetch Google Trends Daily
+        run: bash herpulse/deploy/fetch_only.sh trendsdaily
+        continue-on-error: true
+
       - name: Upload raw corpus
         uses: actions/upload-artifact@v4
         if: always()
@@ -55,6 +59,7 @@ jobs:
             herpulse/data/corpus_*.json
             herpulse/data/fanwork_ao3_*.json
             herpulse/data/search_google_*.json
+            herpulse/data/discover_daily_*.json
           retention-days: 30
 
       - name: Build dashboard
