@@ -44,24 +44,26 @@ DIM_NAMES = {
 }
 
 
-def build_global_stats(samples, fanwork_values=None):
+def build_global_stats(samples, point_values=None):
     """基于本批语料所有样本的信号，算 log 空间的全局均值/方差（z-score 基准）。
 
-    fanwork_values: 设定点粒度的 fanwork 值列表。若提供，fanwork 的 z-score 基准改用
-    「设定点粒度」（来自 AO3 真实 works 数），而非样本累加值（后者在真实采集时恒为 0）。
+    point_values: {signal_name: [设定点粒度的值列表]}。若提供某信号，其 z-score 基准改用
+    「设定点粒度」（如 fanwork=AO3 真实 works、search=Google Trends interest），而非样本
+    累加值（后者在真实采集时该信号恒为 0）。
     """
+    point_values = point_values or {}
     logs = {name: [] for name in SIGNALS}
     for s in samples:
         sig = s.get("signals", {})
         for name in SIGNALS:
-            if name == "fanwork" and fanwork_values is not None:
-                continue  # fanwork 单独用设定点粒度
+            if name in point_values:
+                continue  # 该信号单独用设定点粒度
             x = sig.get(name, 0)
             if name == "rank":
                 x = reverse_rank(x)
             logs[name].append(log1p(x))
-    if fanwork_values is not None:
-        logs["fanwork"] = [log1p(v) for v in fanwork_values]
+    for name, vals in point_values.items():
+        logs[name] = [log1p(v) for v in vals]
     stats = {}
     for name in SIGNALS:
         vals = logs[name]
@@ -100,6 +102,34 @@ def load_fanwork_map(path, dim_info):
             matched += 1
     print(f"  [fanwork] 读取 {len(data)} 个 AO3 tag，命中 {matched} 个设定点（去重后 {len(fanwork_map)} 个）")
     return dict(fanwork_map)
+
+
+def load_search_map(path, dim_info):
+    """读取 Google Trends search 文件，把英文关键词反查为设定点，返回 {设定点tag: interest}。
+
+    search_google_*.json 结构：[{tag, interest, momentum, signals:{search}, ...}, ...]
+    interest 为 Google Trends 相对热度（0-100，该词自身历史归一化，非跨词绝对量）。
+    """
+    if not path:
+        return {}
+    p = Path(path)
+    if not p.exists():
+        print(f"  [search] 未找到 {path}，search 信号保持原值（可能为 0/模拟）")
+        return {}
+    data = load_json(path)
+    search_map = defaultdict(float)
+    matched = 0
+    for item in data:
+        kw = str(item.get("tag", "")).strip().lower()
+        interest = float(item.get("interest", 0)
+                         or (item.get("signals", {}) or {}).get("search", 0)
+                         or 0)
+        trope = dim_info.get(kw)
+        if trope and interest > 0:
+            search_map[trope] += interest
+            matched += 1
+    print(f"  [search] 读取 {len(data)} 个 Google Trends 关键词，命中 {matched} 个设定点（去重后 {len(search_map)} 个）")
+    return dict(search_map)
 
 
 def aggregate_signals(samples):
@@ -155,6 +185,7 @@ def main():
     p.add_argument("--vocab", default="data/seed_vocabulary.json")
     p.add_argument("--out", default="data/dashboard_data.json")
     p.add_argument("--fanwork", default="", help="AO3 fanwork 文件（fanwork_ao3_*.json），注入真实二创产量信号")
+    p.add_argument("--search", default="", help="Google Trends search 文件（search_google_*.json），注入真实搜索热度信号")
     p.add_argument("--top", type=int, default=18, help="题材榜输出条数")
     args = p.parse_args()
 
@@ -193,20 +224,27 @@ def main():
             v = sl.get(k, [])
             signal_layer[k] += len(v) if isinstance(v, list) else (1 if v else 0)
 
-    # 读 AO3 fanwork 真值（可选）
+    # 读 AO3 fanwork + Google Trends search 真值（可选）
     fanwork_map = load_fanwork_map(args.fanwork, dim_info)
+    search_map = load_search_map(args.search, dim_info)
 
     # 聚合样本信号（social/search/rank + 样本内的 fanwork）
     acc = aggregate_signals(samples)
 
-    # 注入真实 fanwork：AO3 works 数覆盖样本累加的 fanwork
+    # 注入真实 fanwork / search：AO3 works 数、Google Trends interest 覆盖样本累加值
     all_tags = list(acc.keys())
-    fanwork_values = [fanwork_map.get(t, 0) for t in all_tags]
-    for t in all_tags:
-        acc[t]["signals"]["fanwork"] = fanwork_map.get(t, 0)
+    point_values = {}
+    if fanwork_map:
+        point_values["fanwork"] = [fanwork_map.get(t, 0) for t in all_tags]
+        for t in all_tags:
+            acc[t]["signals"]["fanwork"] = fanwork_map.get(t, 0)
+    if search_map:
+        point_values["search"] = [search_map.get(t, 0) for t in all_tags]
+        for t in all_tags:
+            acc[t]["signals"]["search"] = search_map.get(t, 0)
 
-    # 全局 z-score 基准：fanwork 用设定点粒度（AO3 works），其余用样本粒度
-    stats = build_global_stats(samples, fanwork_values=fanwork_values)
+    # 全局 z-score 基准：fanwork/search 用设定点粒度，其余用样本粒度
+    stats = build_global_stats(samples, point_values=point_values)
 
     # 每个 tag 算去量纲热度 + delta + region
     tropes = []
@@ -314,7 +352,8 @@ def main():
                     "source": "Bluesky 真实声量(likes+replies×10)" if is_real_fetch else "模拟值"},
         "fanwork": {"label": "二创产量", "real": bool(fanwork_map),
                      "source": "AO3 真实作品数" if fanwork_map else ("未接入(恒0)" if is_real_fetch else "模拟值")},
-        "search": {"label": "搜索热度", "real": False, "source": "未接入(恒0)"},
+        "search": {"label": "搜索热度", "real": bool(search_map),
+                    "source": "Google Trends 真实相对热度(0-100,自身历史归一化)" if search_map else ("未接入(恒0)" if is_real_fetch else "模拟值")},
         "rank": {"label": "榜单名次", "real": is_real_fetch,
                   "source": "采集内名次" if is_real_fetch else "模拟值"},
     }
@@ -323,7 +362,7 @@ def main():
         "meta": {
             "generated": "2026-09-14",
             "pipeline": "extract(deepseek-v4-pro) -> aggregate(heat_engine 去量纲)",
-            "note": "social=Bluesky 真实声量；fanwork=AO3 真实二创产量；search=未接入；rank=采集内名次；delta=最近3天vs前11天声量变化",
+            "note": "social=Bluesky 真实声量；fanwork=AO3 真实二创产量；search=Google Trends 相对热度(自身历史归一化,未接入时恒0)；rank=采集内名次；delta=最近3天vs前11天声量变化",
             "sample_count": len(samples),
             "signal_source": signal_source,
         },

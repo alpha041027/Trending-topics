@@ -31,6 +31,7 @@ HerPulse 真实数据源采集器（M5 数据接入）
 
 import argparse
 import base64
+import http.cookiejar
 import json
 import re
 import sys
@@ -260,6 +261,131 @@ def fetch_ao3_tag_works(tags, now=None):
     return result
 
 
+# ---------------------------------------------------------------- Google Trends
+# Google Trends 无官方公开 API，这里走与 pytrends 同款的「非官方免费接口」：
+#   explore 接口拿 token → widgetdata/multiline 拿时间序列。
+# 全部用标准库（urllib + http.cookiejar）实现，保持项目零第三方依赖。
+#
+# ⚠️ 语义关键：Google Trends 返回的 0-100 是「该词相对自身历史峰值的归一化」，
+#    不是跨词的绝对搜索量。因此：
+#    - interest（近7天均值，0-100）→ 只表示「该词处于自身历史热度的相对位置」，
+#      接近 100 = 正处历史高位（现在热）；不可跨词比较绝对量级。
+#    - momentum（近7天 vs 前7天 的涨跌 %）→ 跨词可比，用于突增/衰减检测。
+#    此局限在看板 signal_source 与 README 中如实标注，不伪装成绝对搜索量。
+
+_TRENDS_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+_TRENDS_HL = "en-US"
+_TRENDS_TZ = "0"  # UTC
+
+
+def _trends_opener():
+    """带 CookieJar 的 opener（Google Trends 需要会话 cookie，NID 等）。"""
+    cj = http.cookiejar.CookieJar()
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(cj),
+        urllib.request.ProxyHandler(),  # 读取环境代理（海外 runner 无代理则直连）
+    )
+    opener.addheaders = [("User-Agent", _TRENDS_UA)]
+    return opener
+
+
+def _strip_trends_prefix(body):
+    """Google Trends API 返回 JSON 前缀 `)]}'` + 换行，需剥离。"""
+    return body.lstrip(")]}'\n,").strip()
+
+
+def _trends_request(opener, url, retries=3, timeout=25):
+    """带重试 + 429 退避的请求。返回解析后的 JSON。"""
+    last_err = None
+    for attempt in range(retries + 1):
+        try:
+            with opener.open(url, timeout=timeout) as r:
+                body = _strip_trends_prefix(r.read().decode("utf-8"))
+                return json.loads(body)
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+            time.sleep(2.0 * (attempt + 1))  # 429 退避
+    raise last_err
+
+
+def _series_to_metrics(values):
+    """时间序列 → (interest, momentum)。纯函数，供 self_test 无联网验证。"""
+    values = [float(v) for v in values]
+    if not values:
+        return 0.0, 0.0
+    recent = values[-7:]                                   # 近7天
+    prev = values[-14:-7] if len(values) >= 14 else values[:-7]  # 前7天
+    interest = sum(recent) / len(recent)
+    if prev:
+        prev_mean = sum(prev) / len(prev)
+        momentum = ((interest - prev_mean) / prev_mean * 100.0) if prev_mean > 0 else (100.0 if interest > 0 else 0.0)
+    else:
+        momentum = 0.0
+    return round(interest, 2), round(momentum, 2)
+
+
+def _trends_series(opener, keyword, timeframe="today 3-m"):
+    """查单个关键词的 Google Trends 时间序列，返回 (interest, momentum)。
+
+    interest = 近7天均值(0-100)；momentum = (近7天均值 - 前7天均值)/前7天均值 ×100%。
+    """
+    # 1) explore 拿 token
+    payload = {
+        "comparisonItem": [{"keyword": keyword, "geo": "", "time": timeframe}],
+        "category": 0,
+        "property": "",
+    }
+    req = json.dumps(payload, separators=(",", ":"))
+    explore_url = (
+        f"https://trends.google.com/trends/api/explore?hl={_TRENDS_HL}"
+        f"&tz={_TRENDS_TZ}&req={urllib.parse.quote(req)}"
+    )
+    explore = _trends_request(opener, explore_url)
+    widget = explore["widgets"][0]
+    token = widget["token"]
+
+    # 2) multiline 拿时间序列
+    req2 = json.dumps(widget["request"], separators=(",", ":"))
+    data_url = (
+        f"https://trends.google.com/trends/api/widgetdata/multiline?hl={_TRENDS_HL}"
+        f"&tz={_TRENDS_TZ}&req={urllib.parse.quote(req2)}&token={urllib.parse.quote(token)}"
+    )
+    data = _trends_request(opener, data_url)
+    tl = data.get("default", {}).get("timelineData", [])
+    if not tl:
+        return 0.0, 0.0
+    return _series_to_metrics(tl[0].get("value", []))
+
+
+def fetch_trends_interest(keywords, timeframe="today 3-m", now=None, pause=1.5):
+    """对每个关键词查 Google Trends，返回 [{tag, interest, momentum, signals}]。
+
+    单个关键词失败不中断整体（记录 error 字段，search 信号置 0）。
+    pause 为请求间隔（秒），Google Trends 限流严格，过快会 429。
+    """
+    now = now or datetime.now(timezone.utc)
+    opener = _trends_opener()
+    # 预热会话 cookie（首次 explore 需先建立 NID cookie）
+    try:
+        opener.open("https://trends.google.com/trends/explore", timeout=20).read()
+    except Exception:  # noqa: BLE001
+        pass  # 预热失败不致命，后续 explore API 仍可能 set-cookie
+    result = []
+    for kw in keywords:
+        item = {"tag": kw, "interest": 0.0, "momentum": 0.0, "market": "EUUS", "day": 0,
+                "signals": {"social": 0, "fanwork": 0, "search": 0.0, "rank": 0}}
+        try:
+            interest, momentum = _trends_series(opener, kw, timeframe)
+            item["interest"] = interest
+            item["momentum"] = momentum
+            item["signals"]["search"] = interest
+        except Exception as e:  # noqa: BLE001
+            item["error"] = str(e)[:120]
+        result.append(item)
+        time.sleep(pause)  # 限流：间隔控制
+    return result
+
+
 # ---------------------------------------------------------------- 汇总输出
 def to_corpus(samples, source, out_path):
     """把样本汇总成 corpus 格式（对齐 corpus_sample.json，可直接喂 extract.py）。"""
@@ -323,17 +449,32 @@ def self_test():
     works = int(m.group(1).replace(",", "")) if m else 0
     print(f"\n  AO3 tag works 提取：{works}（期望 6285）{'✓' if works == 6285 else '✗'}")
 
-    print("\n自检通过。真实抓取需在能访问 Reddit/AO3 的网络环境运行：")
+    # Google Trends 前缀剥离 + 时序→interest/momentum 解析验证（mock，不联网）
+    fake_body = ")]}'\n, {\"default\":{\"timelineData\":[{\"value\":[10,12,14,20,18,22,30,35,40,45,50,55,60,65]}]}}"
+    stripped = _strip_trends_prefix(fake_body)
+    ok_prefix = stripped.startswith("{")
+    d = json.loads(stripped)
+    vals = d["default"]["timelineData"][0]["value"]
+    interest, momentum = _series_to_metrics(vals)
+    # 近7天 = [40,45,50,55,60,65]? 实际上最后7个 = [40,45,50,55,60,65] 是6个，重新算
+    print(f"\n  Google Trends 前缀剥离：{ok_prefix}（期望 True）{'✓' if ok_prefix else '✗'}")
+    print(f"  interest/momentum 解析：interest={interest}, momentum={momentum:.1f}%")
+    print("  （14点序列，近7天=[35,40,45,50,55,60,65] 前7天=[10,12,14,20,18,22,30]）")
+
+    print("\n自检通过。真实抓取需在能访问 Reddit/AO3/Google Trends 的网络环境运行：")
     print("  python src/fetchers.py --source reddit --out data/corpus_reddit.json")
+    print("  python src/fetchers.py --source trends --tags-from-vocab data/seed_vocabulary.json --out data/search_google.json")
 
 
 def main():
     p = argparse.ArgumentParser(description="HerPulse 真实数据源采集器")
-    p.add_argument("--source", choices=["reddit", "ao3", "bluesky"], help="数据源")
+    p.add_argument("--source", choices=["reddit", "ao3", "bluesky", "trends"], help="数据源")
     p.add_argument("--subreddits", help="逗号分隔的 subreddit（默认 otomegames 等）")
-    p.add_argument("--tags", help="逗号分隔的 AO3 tag")
-    p.add_argument("--tags-from-vocab", help="从词表生成 AO3 tag（high_signal 设定点的英文别名）")
+    p.add_argument("--tags", help="逗号分隔的 tag / 搜索关键词（AO3 tag 或 Google Trends 关键词）")
+    p.add_argument("--tags-from-vocab", help="从词表生成（high_signal 设定点的英文别名）")
     p.add_argument("--ao3-limit", type=int, default=0, help="AO3 tag 数量上限（0=不限）")
+    p.add_argument("--trends-timeframe", default="today 3-m", help="Google Trends 时间范围（today 1-m/3-m/12-m）")
+    p.add_argument("--trends-pause", type=float, default=1.5, help="Google Trends 请求间隔秒数（限流控制）")
     p.add_argument("--time-range", default="month", help="Reddit 时间范围（day/week/month/year）")
     p.add_argument("--limit", type=int, default=40)
     p.add_argument("--out", default="data/corpus_fetched.json")
@@ -375,6 +516,23 @@ def main():
         print(f"AO3 采集完成：{len(result)} 个 tag → {args.out}")
         for r in result:
             print(f"  {r['tag']:<24} works={r['works']}")
+    elif args.source == "trends":
+        if args.tags:
+            keywords = [k.strip() for k in args.tags.split(",")]
+        elif args.tags_from_vocab:
+            keywords = tags_from_vocab(args.tags_from_vocab, limit=args.ao3_limit or None)
+            print(f"从词表生成 {len(keywords)} 个 Google Trends 关键词（high_signal 英文别名）")
+        else:
+            raise SystemExit("Google Trends 采集需 --tags 或 --tags-from-vocab（词表路径）")
+        result = fetch_trends_interest(keywords, timeframe=args.trends_timeframe, pause=args.trends_pause)
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        with open(args.out, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        ok = sum(1 for r in result if r.get("interest", 0) > 0)
+        print(f"Google Trends 采集完成：{len(result)} 个关键词（{ok} 个成功）→ {args.out}")
+        for r in result:
+            flag = "✗" if r.get("error") else "✓"
+            print(f"  {flag} {r['tag']:<28} interest={r['interest']:<6} momentum={r['momentum']:+.1f}%")
     else:
         p.print_help()
 

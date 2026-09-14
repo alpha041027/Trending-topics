@@ -1,8 +1,11 @@
 # HerPulse 海外采集（GitHub Actions 免费海外 runner，只采集不出海后半段）
 # 放到仓库 .github/workflows/herpulse-fetch.yml
-# 产物：herpulse/data/corpus_reddit_*.json + fanwork_ao3_*.json（Artifacts 下载回本地）
-# 注意：runner 是数据中心 IP，Reddit 可能返回 429 限流，AO3 通常正常。
+# 产物：herpulse/data/corpus_bluesky_*.json + fanwork_ao3_*.json + search_google_*.json（Artifacts 下载回本地）
+# 注意：runner 是数据中心 IP，Reddit/Google Trends 可能返回 429 限流，AO3/Bluesky 通常正常。
 #      建议先手动 workflow_dispatch 验证，稳定后按需加回 schedule。
+#
+# ⚠️ 注：当前实际生效的是仓库根 .github/workflows/herpulse-fetch.yml（全自动链路 + Pages 部署），
+#      本文件为「只采集」参考模板，两者采集能力一致。
 
 name: HerPulse Overseas Fetch
 
@@ -23,14 +26,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Fetch Reddit + AO3
-        run: bash herpulse/deploy/fetch_only.sh
+      - name: Fetch Bluesky + AO3 + Google Trends
+        run: bash herpulse/deploy/fetch_only.sh all
 
       - name: Upload corpus
         uses: actions/upload-artifact@v4
         with:
           name: herpulse-corpus
           path: |
-            herpulse/data/corpus_reddit_*.json
+            herpulse/data/corpus_*.json
             herpulse/data/fanwork_ao3_*.json
+            herpulse/data/search_google_*.json
           retention-days: 30

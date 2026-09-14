@@ -10,9 +10,11 @@ herpulse/data/extractions_detail*.json
 herpulse/data/predictions*.json
 herpulse/data/probe*.json
 herpulse/data/dashboard_data*.json
-herpulse/data/corpus_reddit_*.json
+herpulse/data/corpus_*.json
 herpulse/data/fanwork_ao3_*.json
+herpulse/data/search_google_*.json
 herpulse/data/*_local.json
 
 # 自动生成的看板产物（run_local.sh / build_dashboard.py 可重新生成）
 herpulse-dashboard-live.html
+herpulse-dashboard-preview.html

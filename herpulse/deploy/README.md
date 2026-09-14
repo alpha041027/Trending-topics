@@ -6,7 +6,7 @@
 
 | 环节 | 脚本 | 是否必须海外网络 | 说明 |
 |------|------|------------------|------|
-| 1. 采集 | `src/fetchers.py` | **必须海外** | 直连 Reddit / AO3，国内被墙 |
+| 1. 采集 | `src/fetchers.py` | **必须海外** | 直连 Reddit / AO3 / Google Trends，国内被墙 |
 | 2. 抽取 | `src/extract.py` | 不必需 | 调 DeepSeek API（`api.deepseek.com` 国内可达） |
 | 3. 聚合 | `src/aggregate.py` | 不必需 | 纯本地计算 |
 | 4. 渲染 | `src/build_dashboard.py` | 不必需 | 纯本地计算 |
@@ -19,7 +19,7 @@
 
 ```
 海外（GitHub Actions，免费 runner）
-  fetch_only.sh  →  data/corpus_reddit_*.json + fanwork_ao3_*.json
+  fetch_only.sh  →  data/corpus_reddit_*.json + fanwork_ao3_*.json + search_google_*.json
         │  Artifacts 下载回本地
         ▼
 国内（本地 / 任意机器）
@@ -30,8 +30,8 @@
 
 | 文件 | 用途 |
 |------|------|
-| `fetch_only.sh` | **海外**只采集（Reddit + AO3），产出 corpus |
-| `run_local.sh` | **国内**后半段（抽取→聚合→渲染），吃 corpus |
+| `fetch_only.sh` | **海外**只采集（Bluesky 社媒 + AO3 二创 + Google Trends 搜索），产出 corpus |
+| `run_local.sh` | **国内**后半段（抽取→聚合→渲染），吃 corpus，自动检测并注入 fanwork/search 真值 |
 | `github-actions.yml` | GitHub Actions 定时采集（免费海外 runner） |
 | `run_pipeline.sh` | 完整链路（采集+后半段），供「全链路出海」备选 |
 | `Dockerfile` | 完整链路容器化，供「全链路出海」备选 |
@@ -46,7 +46,7 @@
 1. 代码推到**私有仓库**（含 `herpulse/` 目录与 `deploy/github-actions.yml`）。
 2. 把 `deploy/github-actions.yml` 复制为仓库根 `.github/workflows/herpulse-fetch.yml`。
 3. `Actions` 页手动 `Run workflow` 验证一次（首次建议先手动，确认 Reddit 不被限流）。
-4. 每次 run 结束后，在 `Artifacts` 里下载 `herpulse-corpus`（含 `corpus_reddit_*.json` 与 `fanwork_ao3_*.json`）。
+4. 每次 run 结束后，在 `Artifacts` 里下载 `herpulse-corpus`（含 `corpus_reddit_*.json`、`fanwork_ao3_*.json`、`search_google_*.json`）。
 
 无需任何 Secrets——采集步骤不调 LLM，不碰 API key。
 
@@ -68,6 +68,27 @@ bash deploy/run_local.sh data/corpus_reddit_20260914_120000.json
 
 ---
 
+## 四信号来源（热度公式 social/fanwork/search/rank）
+
+| 信号 | 数据源 | 语义 | 采集方式 |
+|------|--------|------|----------|
+| social 社媒声量 | Bluesky 公开 API | 帖子的 likes + replies×10（真实声量） | `--source bluesky` |
+| fanwork 二创产量 | AO3 | 该设定点 tag 的作品总数（真实二创产量） | `--source ao3 --tags-from-vocab` |
+| search 搜索热度 | Google Trends | 该词相对自身历史热度的相对值（0-100） | `--source trends --tags-from-vocab` |
+| rank 榜单名次 | 采集内名次 | 同平台内排序位置（第 1 名最热） | 随社媒采集产出 |
+
+### ⚠️ Google Trends 搜索信号的语义局限（务必理解）
+
+Google Trends 免费接口返回的 **0-100 是「该词相对自身历史峰值的归一化」，不是跨词的绝对搜索量**。因此：
+
+- **不能**拿「yandere 的 92 比 slow burn 的 55 更热」下结论——92 只说明 yandere 正处在自己历史热度的 92% 高位。
+- **可以**用的信息：`interest`（近 7 天均值，越接近 100 = 正处历史高位）+ `momentum`（近 7 天 vs 前 7 天的涨跌 %，跨词可比，用于突增检测）。
+- 看板会把 search 信号如实标注为「Google Trends 真实相对热度(自身历史归一化)」，不伪装成绝对搜索量。
+
+若后续需要「跨词绝对搜索量级」，需改用付费数据服务（如 Semrush / Ahrefs），不在当前 MVP 范围。
+
+---
+
 ## 备选：全链路出海
 
 若后续想整套放海外定时跑通（省掉回传人工步骤），用 `run_pipeline.sh` + `Dockerfile` + `crontab.example`。此时才需要给海外环境配 `HERPULSE_LLM_API_KEY`。
@@ -81,8 +102,9 @@ bash deploy/run_local.sh data/corpus_reddit_20260914_120000.json
 
 ## 已知缺口
 
-- **AO3 fanwork 信号未并入热度**：`fetch_only.sh` 采集的 fanwork（二创产量）落盘为独立文件 `fanwork_ao3_*.json`，`aggregate.py` 尚未消费它。需给 `aggregate.py` 增加 `--fanwork` 参数，把 `{tag: works}` 映射进对应设定点的 `fanwork` 信号（对应热度公式决策④）。接入前，看板热度信号主要来自 Reddit `social/rank`。
-- **GitHub runner 数据中心 IP**：Reddit 可能返回 429 限流，AO3 通常正常。若 Reddit 频繁被限，需换 VPS + 住宅代理。
+- **Google Trends 限流与数据中心 IP**：Google Trends 对数据中心 IP（GitHub runner）可能返回 429 或要求验证码。已做 1.5s 请求间隔 + 重试退避，但 53 个 high_signal 关键词一次全采约需 80s+，偶发 429 时部分词会失败（记录 `error` 字段、search 信号置 0，不中断整体）。若持续失败，需换 VPS + 住宅代理，或减少 `HERPULSE_TRENDS_LIMIT`。
+- **Reddit 可能 429 限流**：同属数据中心 IP 问题。AO3、Bluesky 通常正常。若 Reddit 频繁被限，需换 VPS + 住宅代理。
+- **金标集仍为开发侧自标**：`data/gold_set_seed.json` 有自证风险，正式评测需真人双标注 + kappa（工具 `src/kappa_annotate.py` 已备）。
 
 ## 安全提示
 

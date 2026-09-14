@@ -236,8 +236,10 @@ function ss(){ return (DATA.meta&&DATA.meta.signal_source)||{}; }
 function srcTag(key){
   const s = ss()[key];
   if(!s) return '';
-  const cls = s.real ? 'real' : (String(s.source).indexOf('未接入')>=0 ? 'miss' : 'fake');
-  return `<span class="srctag ${cls}" title="${s.source}">${s.label}·${s.real?'真值':'未接入'}</span>`;
+  const src = String(s.source||'');
+  const cls = s.real ? 'real' : (src.indexOf('未接入')>=0 ? 'miss' : 'fake');
+  const label = s.real ? '真值' : (src.indexOf('未接入')>=0 ? '未接入' : '模拟');
+  return `<span class="srctag ${cls}" title="${src}">${s.label}·${label}</span>`;
 }
 
 function renderSignalSource(){
@@ -375,11 +377,20 @@ function renderFoot(){
   const s = ss();
   const order=['social','fanwork','search','rank'];
   const labels={social:'社媒',fanwork:'二创',search:'搜索',rank:'名次'};
-  const real = order.filter(k=>s[k]&&s[k].real).map(k=>labels[k]);
-  const miss = order.filter(k=>s[k]&&!s[k].real).map(k=>labels[k]);
-  const realTxt = real.length? real.join('/')+'=真值' : '';
-  const missTxt = miss.length? miss.join('/')+'=未接入' : '';
-  $('#foot').innerHTML = `生成于 ${DATA.meta.generated} · 抽取=DeepSeek V4 Pro（thinking disabled） · 热度=去量纲引擎（log1p+z-score+MAD） · ${realTxt}${realTxt&&missTxt?'；':''}${missTxt}`;
+  const real = [], miss = [], fake = [];
+  order.forEach(k=>{
+    if(!s[k]) return;
+    const src = String(s[k].source||'');
+    if(s[k].real) real.push(labels[k]);
+    else if(src.indexOf('未接入')>=0) miss.push(labels[k]);
+    else fake.push(labels[k]);
+  });
+  const parts = [];
+  if(real.length) parts.push(real.join('/')+'=真值');
+  if(fake.length) parts.push(fake.join('/')+'=模拟值');
+  if(miss.length) parts.push(miss.join('/')+'=未接入');
+  const statusTxt = parts.join('；');
+  $('#foot').innerHTML = `生成于 ${DATA.meta.generated} · 抽取=DeepSeek V4 Pro（thinking disabled） · 热度=去量纲引擎（log1p+z-score+MAD） · ${statusTxt}`;
   $('#bnCount').textContent = DATA.meta.sample_count;
 }
 
