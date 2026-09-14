@@ -50,6 +50,11 @@ OTOME_SUBREDDITS = [
 
 
 # ---------------------------------------------------------------- HTTP 工具
+# 显式读取代理环境变量，Windows 上 urllib 自动探测有时不稳定
+_PROXY_HANDLER = urllib.request.ProxyHandler()
+_URL_OPENER = urllib.request.build_opener(_PROXY_HANDLER)
+
+
 def http_get(url, headers=None, timeout=25, retries=2):
     headers = headers or {}
     headers.setdefault("User-Agent", DEFAULT_UA)
@@ -57,7 +62,7 @@ def http_get(url, headers=None, timeout=25, retries=2):
     for attempt in range(retries + 1):
         try:
             req = urllib.request.Request(url, headers=headers)
-            with urllib.request.urlopen(req, timeout=timeout) as r:
+            with _URL_OPENER.open(req, timeout=timeout) as r:
                 return r.read()
         except Exception as e:  # noqa: BLE001
             last_err = e
